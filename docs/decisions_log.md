@@ -20,3 +20,7 @@ Initial project design decisions.
   - if a new external dependency is required, developer must update `requirements.txt`,
   - mention the dependency change in stage summary,
   - do not add dependencies silently.
+
+feature computation stages will use core_balanced as the default working dataset;
+
+extended_us_heavy will be used later for robustness / transfer checks.

@@ -1,0 +1,15 @@
+2026-03-11 00:01:32 | INFO | Feature block A started
+2026-03-11 00:01:32 | INFO | Dataset profile: core_balanced
+2026-03-11 00:01:32 | INFO | Config path: D:\Projects\TS_fcst\configs\features_block_A_v1.yaml
+2026-03-11 00:01:33 | INFO | Input rows: 826608
+2026-03-11 00:01:33 | INFO | Input series: 418
+2026-03-11 00:01:53 | INFO | Output series: 418
+2026-03-11 00:01:53 | INFO | Series successful: 418
+2026-03-11 00:01:53 | INFO | Series with warnings: 0
+2026-03-11 00:01:53 | INFO | NaN hurst_rs: 0
+2026-03-11 00:01:53 | INFO | NaN hurst_dfa: 0
+2026-03-11 00:01:53 | INFO | p-values outside [0,1]: 0
+2026-03-11 00:01:53 | INFO | Processing errors: 0
+2026-03-11 00:01:53 | INFO | Parquet path: D:\Projects\TS_fcst\artifacts\features\features_block_A_v1.parquet
+2026-03-11 00:01:53 | INFO | Excel path: D:\Projects\TS_fcst\artifacts\reports\features_block_A_v1.xlsx
+2026-03-11 00:01:53 | INFO | Execution time: 20.67 sec

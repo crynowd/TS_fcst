@@ -1,0 +1,57 @@
+{
+  "run_id": "feature_block_A_v1_20260310T210132Z",
+  "stage": "feature_block_A",
+  "timestamp_start": "2026-03-10T21:01:32.657196+00:00",
+  "timestamp_end": "2026-03-10T21:01:53.324786+00:00",
+  "git_commit": "af07b30aab2f25418bbac45b3bc28d2f3e017bf3",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\features_block_A_v1.yaml",
+  "config_hash": "1ff639b6aafd6b2527406d893dcdcaa500ece29fee3be13eaddf3c44eec01971",
+  "input_sources": {
+    "log_returns_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "dataset_profile": "core_balanced",
+    "input_series": 418
+  },
+  "outputs": {
+    "features_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_A_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\features_block_A_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_block_A_v1_20260310T210132Z.log"
+  },
+  "summary": {
+    "series_total": 418,
+    "series_successful": 418,
+    "series_with_warnings": 0,
+    "nan_hurst_rs": 0,
+    "nan_hurst_dfa": 0,
+    "hurst_rs_range": {
+      "min": 0.4128224885521911,
+      "max": 0.6580423458911433
+    },
+    "hurst_dfa_range": {
+      "min": 0.2903204087545108,
+      "max": 0.6956721689487014
+    },
+    "iacf_abs_1_20_range": {
+      "min": 0.21002587666335978,
+      "max": 2.3036464387776863
+    },
+    "iacf_absret_1_20_range": {
+      "min": 0.30205352531064517,
+      "max": 5.81601760655325
+    },
+    "vr_q2_range": {
+      "min": 0.5232283548265861,
+      "max": 1.178696584005869
+    },
+    "vr_q5_range": {
+      "min": 0.2997364964943219,
+      "max": 1.2825358267174036
+    },
+    "vr_q10_range": {
+      "min": 0.19028044808658784,
+      "max": 1.3072134218790596
+    },
+    "pvalues_outside_0_1": 0,
+    "processing_errors": 0
+  }
+}

@@ -1,0 +1,71 @@
+run_name: "feature_block_A_v1"
+stage: "feature_block_A"
+
+input:
+  log_returns_parquet: "artifacts/processed/log_returns_v1.parquet"
+  dataset_profiles_parquet: "artifacts/processed/dataset_profiles_v1.parquet"
+
+dataset_profile: "core_balanced"
+
+metrics:
+  acf_lags:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 25
+    - 30
+    - 40
+    - 50
+    - 75
+    - 100
+    - 125
+    - 150
+    - 200
+    - 250
+  integrated_acf_windows:
+    - 5
+    - 10
+    - 20
+    - 50
+    - 100
+    - 250
+  ljung_box_lags:
+    - 5
+    - 10
+    - 20
+    - 50
+  variance_ratio_q:
+    - 2
+    - 5
+    - 10
+  hurst_rs:
+    min_window: 16
+    max_window: 256
+    num_windows: 12
+    min_scales: 4
+  hurst_dfa:
+    min_window: 16
+    max_window: 256
+    num_windows: 12
+    min_scales: 4
+
+output:
+  parquet_name: "features_block_A_v1.parquet"
+  excel_name: "features_block_A_v1.xlsx"
