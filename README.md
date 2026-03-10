@@ -82,3 +82,14 @@ but **not tracked by git**.
 
 Early research phase.
 
+## Environment setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+## Тесты запускать так
+
+set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+python -m pytest -q

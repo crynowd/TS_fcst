@@ -1,0 +1,26 @@
+{
+  "run_id": "data_inventory_v1_20260310T201802Z",
+  "stage": "data_inventory",
+  "timestamp_start": "2026-03-10T20:18:02.633383+00:00",
+  "timestamp_end": "2026-03-10T20:19:07.303564+00:00",
+  "git_commit": "5be2f1009a8c57afee192827f05d2751c766d1b3",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\data_inventory_v1.yaml",
+  "config_hash": "811c396c20be7c30f74aa47523ec20b550d648954999826bc8d52fc39ebd1aca",
+  "input_sources": {
+    "ru_daily": "D:/Projects/Data/Stocks/ru/D1",
+    "us_daily": "D:/Projects/Data/Stocks/us/Stocks",
+    "ru_files": 249,
+    "us_files": 7195
+  },
+  "outputs": {
+    "parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\series_catalog_v1.parquet",
+    "excel": "D:\\Projects\\TS_fcst\\artifacts\\reports\\series_catalog_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\data_inventory_v1_20260310T201802Z.log"
+  },
+  "summary": {
+    "total_files": 7444,
+    "valid_target": 3625,
+    "valid_min_only": 498,
+    "invalid": 3321
+  }
+}

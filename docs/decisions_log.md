@@ -16,3 +16,7 @@ Initial project design decisions.
 - Time slice policy: use most recent observations.
 - Feature extraction divided into four blocks.
 - Data stored outside repository.
+- Dependency update policy for new pipeline stages:
+  - if a new external dependency is required, developer must update `requirements.txt`,
+  - mention the dependency change in stage summary,
+  - do not add dependencies silently.
