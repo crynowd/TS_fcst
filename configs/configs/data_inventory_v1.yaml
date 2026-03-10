@@ -1,0 +1,75 @@
+run_name: "data_inventory_v1"
+
+input:
+
+  ru_pattern: "*_D1.csv"
+
+  us_pattern: "*.txt"
+
+schema:
+
+  ru:
+
+    date_col: "datetime"
+
+    open_col: "open"
+
+    high_col: "high"
+
+    low_col: "low"
+
+    close_col: "close"
+
+    volume_col: "volume"
+
+  us:
+
+    date_col: "Date"
+
+    open_col: "Open"
+
+    high_col: "High"
+
+    low_col: "Low"
+
+    close_col: "Close"
+
+    volume_col: "Volume"
+
+
+standardization:
+
+  output_columns:
+
+    - series_id
+    - ticker
+    - market
+    - date
+    - open
+    - high
+    - low
+    - close
+    - volume
+
+  market_values:
+
+    ru: "RU"
+    us: "US"
+
+
+series_policy:
+
+  target_length: 2000
+
+  min_length: 1500
+
+  slice_mode: "last_n"
+
+
+quality_checks:
+
+  require_positive_close: true
+
+  sort_by_date: true
+
+  detect_missing_dates: true
