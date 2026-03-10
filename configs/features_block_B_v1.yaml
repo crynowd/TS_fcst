@@ -1,0 +1,39 @@
+﻿run_name: "feature_block_B_v1"
+stage: "feature_block_B"
+
+input:
+  log_returns_parquet: "artifacts/processed/log_returns_v1.parquet"
+  dataset_profiles_parquet: "artifacts/processed/dataset_profiles_v1.parquet"
+
+dataset_profile: "core_balanced"
+
+metrics:
+  spectral:
+    method: "welch"
+    welch_nperseg: 256
+    regression_freq_min_ratio: 0.02
+    regression_freq_max_ratio: 1.0
+    min_regression_points: 8
+    entropy_normalized: true
+  permutation_entropy:
+    order: 3
+    delay: 1
+    normalized: true
+  lz_complexity:
+    binarization: "median"
+    normalized: true
+  sample_entropy:
+    m: 2
+    r_ratio: 0.2
+
+output:
+  parquet_name: "features_block_B_v1.parquet"
+  excel_name: "features_block_B_v1.xlsx"
+  metric_columns:
+    - spectral_slope_beta
+    - spectral_entropy
+    - spectral_flatness
+    - noise_fn
+    - permutation_entropy
+    - lz_complexity
+    - sample_entropy

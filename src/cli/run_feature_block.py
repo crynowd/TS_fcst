@@ -10,11 +10,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--block",
         required=True,
-        help="Feature block code (currently supported: A)",
+        help="Feature block code (currently supported: A, B)",
     )
     parser.add_argument(
         "--config",
-        default="configs/features_block_A_v1.yaml",
+        default="",
         help="Path to feature block config YAML",
     )
     return parser.parse_args()
@@ -22,7 +22,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    result = run_feature_block(args.block, args.config)
+    block = args.block.strip().upper()
+    config_path = args.config
+    if not config_path:
+        if block == "A":
+            config_path = "configs/features_block_A_v1.yaml"
+        elif block == "B":
+            config_path = "configs/features_block_B_v1.yaml"
+    result = run_feature_block(block, config_path)
     print(
         "run_id={run_id} input_series={input_series} output_series={output_series} "
         "successful={successful} warnings={warnings}".format(
@@ -37,4 +44,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

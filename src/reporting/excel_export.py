@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Any, Dict, Iterable
 
 import pandas as pd
 
@@ -152,6 +152,93 @@ def export_features_block_a_excel(
     with pd.ExcelWriter(out_path) as writer:
         summary_df.to_excel(writer, sheet_name="summary", index=False)
         features_df.to_excel(writer, sheet_name="features_block_A", index=False)
+        warnings_df.to_excel(writer, sheet_name="warnings", index=False)
+        ranges_df.to_excel(writer, sheet_name="ranges", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path
+
+
+def export_features_block_b_excel(
+    features_df: pd.DataFrame,
+    summary: Dict[str, object],
+    warnings_df: pd.DataFrame,
+    excel_path: str | Path,
+    run_id: str,
+    dataset_profile: str,
+    input_paths: Dict[str, str],
+    output_parquet: str,
+    config_params: Dict[str, Any],
+) -> Path:
+    """Export feature block B artifacts into a multi-sheet Excel report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    metric_columns = [
+        "spectral_slope_beta",
+        "spectral_entropy",
+        "spectral_flatness",
+        "noise_fn",
+        "permutation_entropy",
+        "lz_complexity",
+        "sample_entropy",
+    ]
+
+    summary_row: Dict[str, object] = {
+        "dataset_profile": dataset_profile,
+        "series_total": int(summary.get("series_total", 0)),
+        "series_successful": int(summary.get("series_successful", 0)),
+        "series_with_warnings": int(summary.get("series_with_warnings", 0)),
+        "spectral_entropy_lt_0": int(summary.get("spectral_entropy_lt_0", 0)),
+        "spectral_flatness_lt_0": int(summary.get("spectral_flatness_lt_0", 0)),
+    }
+    for metric in metric_columns:
+        summary_row[f"nan_{metric}"] = int(summary.get(f"nan_{metric}", 0))
+    if "spectral_entropy_outside_0_1" in summary:
+        summary_row["spectral_entropy_outside_0_1"] = int(summary.get("spectral_entropy_outside_0_1", 0))
+    if "permutation_entropy_outside_0_1" in summary:
+        summary_row["permutation_entropy_outside_0_1"] = int(summary.get("permutation_entropy_outside_0_1", 0))
+
+    summary_df = pd.DataFrame([summary_row])
+
+    rows = []
+    for col in metric_columns:
+        if col not in features_df.columns:
+            continue
+        vals = pd.to_numeric(features_df[col], errors="coerce")
+        rows.append(
+            {
+                "metric": col,
+                "min": float(vals.min()) if vals.notna().any() else None,
+                "max": float(vals.max()) if vals.notna().any() else None,
+                "mean": float(vals.mean()) if vals.notna().any() else None,
+                "median": float(vals.median()) if vals.notna().any() else None,
+            }
+        )
+    ranges_df = pd.DataFrame(rows)
+
+    readme_df = pd.DataFrame(
+        [
+            {"key": "run_id", "value": run_id},
+            {"key": "stage", "value": "feature_block_B"},
+            {"key": "dataset_profile", "value": dataset_profile},
+            {"key": "input_log_returns_parquet", "value": input_paths.get("log_returns_parquet", "")},
+            {"key": "input_dataset_profiles_parquet", "value": input_paths.get("dataset_profiles_parquet", "")},
+            {"key": "output_features_parquet", "value": output_parquet},
+            {
+                "key": "metrics",
+                "value": "Spectral slope/entropy/flatness, NoiseFN, permutation entropy, Lempel-Ziv complexity, sample entropy",
+            },
+            {"key": "spectral_params", "value": str(config_params.get("spectral", {}))},
+            {"key": "permutation_entropy_params", "value": str(config_params.get("permutation_entropy", {}))},
+            {"key": "lz_complexity_params", "value": str(config_params.get("lz_complexity", {}))},
+            {"key": "sample_entropy_params", "value": str(config_params.get("sample_entropy", {}))},
+        ]
+    )
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        features_df.to_excel(writer, sheet_name="features_block_B", index=False)
         warnings_df.to_excel(writer, sheet_name="warnings", index=False)
         ranges_df.to_excel(writer, sheet_name="ranges", index=False)
         readme_df.to_excel(writer, sheet_name="readme", index=False)
