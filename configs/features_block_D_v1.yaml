@@ -18,6 +18,8 @@ metrics:
     m_min: 2
     m_max: 10
     fnn_threshold: 0.05
+    fnn_plateau_tol: 0.01
+    fnn_min_improvement: 0.03
     fnn_rtol: 10.0
     fnn_atol_std: 2.0
   correlation_dimension:
@@ -37,10 +39,13 @@ metrics:
     fit_end: 10
     min_pairs: 20
     min_fit_points: 5
+    lyapunov_time_min_exponent: 0.001
   metric_columns:
     - selected_delay_tau
     - tau_selection_method
     - fnn_success_flag
+    - fnn_selection_mode
+    - fnn_min_fraction
     - embedding_dimension
     - correlation_dimension
     - largest_lyapunov_exponent

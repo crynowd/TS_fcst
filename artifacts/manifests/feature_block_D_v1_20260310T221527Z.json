@@ -1,0 +1,92 @@
+{
+  "run_id": "feature_block_D_v1_20260310T221527Z",
+  "stage": "feature_block_D",
+  "timestamp_start": "2026-03-10T22:15:27.224433+00:00",
+  "timestamp_end": "2026-03-10T22:17:33.067282+00:00",
+  "git_commit": "b3fb8661428ef182b28bc49dd0dd68b0b2b7f8f9",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\features_block_D_v1.yaml",
+  "config_hash": "eb19685b0432c4f327bc77eff9ee0c7728f17c5a26f284c78d5a03d2ad55074d",
+  "input_sources": {
+    "log_returns_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "dataset_profile": "core_balanced",
+    "input_series": 418
+  },
+  "outputs": {
+    "features_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_D_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\features_block_D_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_block_D_v1_20260310T221527Z.log"
+  },
+  "summary": {
+    "series_total": 418,
+    "series_successful": 223,
+    "series_with_warnings": 195,
+    "warning_rows": 195,
+    "warning_flag_breakdown": {
+      "lyapunov_time_nonpositive_lle": 174,
+      "lyapunov_time_near_zero_lle": 21
+    },
+    "tau_selection_breakdown": {
+      "ami": 418,
+      "acf_zero": 0,
+      "acf_einv": 0,
+      "fallback_default": 0
+    },
+    "fnn_selection_breakdown": {
+      "strict_threshold": 15,
+      "stable_plateau": 375,
+      "best_available": 28,
+      "failed": 0
+    },
+    "exponent_nonpositive": 174,
+    "lyapunov_time_nonpositive_lle": 174,
+    "lyapunov_time_near_zero_lle": 21,
+    "correlation_dimension_negative": 0,
+    "embedding_dimension_out_of_bounds": 0,
+    "ranges": {
+      "selected_delay_tau": {
+        "min": 2.0,
+        "max": 11.0,
+        "mean": 3.949760765550239,
+        "median": 4.0
+      },
+      "embedding_dimension": {
+        "min": 4.0,
+        "max": 10.0,
+        "mean": 6.29665071770335,
+        "median": 6.0
+      },
+      "fnn_min_fraction": {
+        "min": 0.008585858585858586,
+        "max": 0.1409669211195929,
+        "mean": 0.09125629361355767,
+        "median": 0.09276782961736013
+      },
+      "correlation_dimension": {
+        "min": 0.394764136143342,
+        "max": 5.915275742538066,
+        "mean": 3.4609163452465745,
+        "median": 3.4754852318630793
+      },
+      "largest_lyapunov_exponent": {
+        "min": -0.04529131953817394,
+        "max": 0.05730420143123985,
+        "mean": 0.004369999957917122,
+        "median": 0.002257544677299816
+      },
+      "lyapunov_time": {
+        "min": 17.450727434006993,
+        "max": 997.491153290975,
+        "mean": 139.5495228911284,
+        "median": 75.25802043739287
+      }
+    },
+    "nan_selected_delay_tau": 0,
+    "nan_embedding_dimension": 0,
+    "nan_fnn_min_fraction": 0,
+    "nan_correlation_dimension": 0,
+    "nan_largest_lyapunov_exponent": 0,
+    "nan_lyapunov_time": 195,
+    "processing_errors": 0
+  }
+}

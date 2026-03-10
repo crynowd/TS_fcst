@@ -44,6 +44,8 @@ def _feature_metric_columns(cfg: Dict[str, Any]) -> List[str]:
         "selected_delay_tau",
         "tau_selection_method",
         "fnn_success_flag",
+        "fnn_selection_mode",
+        "fnn_min_fraction",
         "embedding_dimension",
         "correlation_dimension",
         "largest_lyapunov_exponent",
@@ -143,14 +145,49 @@ def _phase_space_reconstruct(x: np.ndarray, m: int, tau: int) -> np.ndarray:
     return np.column_stack(cols)
 
 
+def select_embedding_dimension_fnn_ratios(
+    ratios: Dict[int, float],
+    emb_cfg: Dict[str, Any],
+) -> Tuple[float, str, float]:
+    if not ratios:
+        return np.nan, "failed", np.nan
+
+    fnn_threshold = float(emb_cfg.get("fnn_threshold", 0.05))
+    plateau_tol = float(emb_cfg.get("fnn_plateau_tol", 0.01))
+    min_improvement = float(emb_cfg.get("fnn_min_improvement", 0.03))
+
+    items = sorted((int(m), float(v)) for m, v in ratios.items() if np.isfinite(v))
+    if not items:
+        return np.nan, "failed", np.nan
+
+    ms = [m for m, _ in items]
+    vals = [v for _, v in items]
+    min_fraction = float(np.min(vals))
+
+    strict = [m for m, v in items if v <= fnn_threshold]
+    if strict:
+        return float(strict[0]), "strict_threshold", min_fraction
+
+    if len(items) >= 3:
+        for i in range(1, len(items) - 1):
+            cur_v = vals[i]
+            tail_vals = vals[i:]
+            tail_diffs = [abs(tail_vals[j] - tail_vals[j - 1]) for j in range(1, len(tail_vals))]
+            remaining_drop = max(0.0, cur_v - min(tail_vals))
+            if tail_diffs and max(tail_diffs) <= plateau_tol and remaining_drop <= min_improvement:
+                return float(ms[i]), "stable_plateau", min_fraction
+
+    best_m = min(items, key=lambda kv: kv[1])[0]
+    return float(best_m), "best_available", min_fraction
+
+
 def select_embedding_dimension_fnn(
     x: np.ndarray,
     tau: int,
     emb_cfg: Dict[str, Any],
-) -> Tuple[float, bool, Dict[int, float], List[str]]:
+) -> Tuple[float, bool, str, float, Dict[int, float], List[str]]:
     m_min = max(2, int(emb_cfg.get("m_min", 2)))
     m_max = max(m_min, int(emb_cfg.get("m_max", 10)))
-    fnn_threshold = float(emb_cfg.get("fnn_threshold", 0.05))
     fnn_rtol = float(emb_cfg.get("fnn_rtol", 10.0))
     fnn_atol_std = float(emb_cfg.get("fnn_atol_std", 2.0))
 
@@ -158,7 +195,7 @@ def select_embedding_dimension_fnn(
     ratios: Dict[int, float] = {}
     sigma = float(np.std(x, ddof=1))
     if not np.isfinite(sigma) or sigma <= 0:
-        return np.nan, False, ratios, ["fnn_zero_std"]
+        return np.nan, False, "failed", np.nan, ratios, ["fnn_zero_std", "fnn_unstable"]
 
     for m in range(m_min, m_max + 1):
         x_m = _phase_space_reconstruct(x, m=m, tau=tau)
@@ -190,15 +227,15 @@ def select_embedding_dimension_fnn(
             ratios[m] = fnn_ratio
 
     if not ratios:
-        return np.nan, False, ratios, ["fnn_unavailable"]
+        return np.nan, False, "failed", np.nan, ratios, ["fnn_unavailable", "fnn_unstable"]
 
-    candidates = sorted((m for m, ratio in ratios.items() if ratio <= fnn_threshold))
-    if candidates:
-        return float(candidates[0]), True, ratios, flags
+    m, mode, min_fraction = select_embedding_dimension_fnn_ratios(ratios, emb_cfg=emb_cfg)
+    if mode == "failed":
+        flags.append("fnn_unstable")
+        return np.nan, False, mode, min_fraction, ratios, flags
 
-    best_m = min(ratios.items(), key=lambda kv: kv[1])[0]
-    flags.append("fnn_threshold_not_met")
-    return float(best_m), False, ratios, flags
+    fnn_success = mode in {"strict_threshold", "stable_plateau", "best_available"}
+    return float(m), fnn_success, mode, float(min_fraction), ratios, flags
 
 
 def estimate_correlation_dimension(
@@ -360,11 +397,13 @@ def estimate_largest_lyapunov_rosenstein(
     return float(fit.slope), diagnostics, flags
 
 
-def compute_lyapunov_time(lle: float) -> Tuple[float, List[str]]:
+def compute_lyapunov_time(lle: float, min_exponent: float = 1e-3) -> Tuple[float, List[str]]:
     if not np.isfinite(lle):
         return np.nan, ["lyapunov_time_lle_nonfinite"]
     if lle <= 0:
         return np.nan, ["lyapunov_time_nonpositive_lle"]
+    if lle < float(min_exponent):
+        return np.nan, ["lyapunov_time_near_zero_lle"]
     value = 1.0 / lle
     if not np.isfinite(value):
         return np.nan, ["lyapunov_time_nonfinite"]
@@ -394,6 +433,8 @@ def _compute_single_series_features(series_df: pd.DataFrame, dataset_profile: st
     for col in metric_columns:
         if col == "tau_selection_method":
             result.metrics[col] = ""
+        elif col == "fnn_selection_mode":
+            result.metrics[col] = "failed"
         elif col == "fnn_success_flag":
             result.metrics[col] = False
         else:
@@ -410,8 +451,14 @@ def _compute_single_series_features(series_df: pd.DataFrame, dataset_profile: st
     for flag in tau_flags:
         result.add_warning(flag)
 
-    m, fnn_success, _ratios, fnn_flags = select_embedding_dimension_fnn(x, tau=tau, emb_cfg=cfg.get("metrics", {}).get("embedding", {}))
+    m, fnn_success, fnn_mode, fnn_min_fraction, _ratios, fnn_flags = select_embedding_dimension_fnn(
+        x,
+        tau=tau,
+        emb_cfg=cfg.get("metrics", {}).get("embedding", {}),
+    )
     result.metrics["fnn_success_flag"] = bool(fnn_success)
+    result.metrics["fnn_selection_mode"] = str(fnn_mode)
+    result.metrics["fnn_min_fraction"] = float(fnn_min_fraction) if np.isfinite(fnn_min_fraction) else np.nan
     result.metrics["embedding_dimension"] = float(m) if np.isfinite(m) else np.nan
     for flag in fnn_flags:
         result.add_warning(flag)
@@ -441,7 +488,11 @@ def _compute_single_series_features(series_df: pd.DataFrame, dataset_profile: st
     for flag in lya_flags:
         result.add_warning(flag)
 
-    l_time, l_time_flags = compute_lyapunov_time(lle)
+    lya_cfg = cfg.get("metrics", {}).get("lyapunov", {})
+    l_time, l_time_flags = compute_lyapunov_time(
+        lle,
+        min_exponent=float(lya_cfg.get("lyapunov_time_min_exponent", 1e-3)),
+    )
     result.metrics["lyapunov_time"] = l_time
     for flag in l_time_flags:
         result.add_warning(flag)
@@ -474,6 +525,7 @@ def _summarize_feature_table(features_df: pd.DataFrame, cfg: Dict[str, Any]) -> 
     key_cols = [
         "selected_delay_tau",
         "embedding_dimension",
+        "fnn_min_fraction",
         "correlation_dimension",
         "largest_lyapunov_exponent",
         "lyapunov_time",
@@ -484,6 +536,10 @@ def _summarize_feature_table(features_df: pd.DataFrame, cfg: Dict[str, Any]) -> 
     lle = pd.to_numeric(features_df["largest_lyapunov_exponent"], errors="coerce")
     cdim = pd.to_numeric(features_df["correlation_dimension"], errors="coerce")
     emb = pd.to_numeric(features_df["embedding_dimension"], errors="coerce")
+    fnn_modes = ["strict_threshold", "stable_plateau", "best_available", "failed"]
+    fnn_breakdown = {
+        mode: int((features_df["fnn_selection_mode"].astype(str) == mode).sum()) for mode in fnn_modes
+    }
     warning_counter: Counter[str] = Counter()
     for raw in features_df["feature_warning_flags"].astype(str):
         if not raw:
@@ -500,7 +556,10 @@ def _summarize_feature_table(features_df: pd.DataFrame, cfg: Dict[str, Any]) -> 
         "warning_rows": int((features_df["feature_warning_flags"].astype(str) != "").sum()),
         "warning_flag_breakdown": dict(sorted(warning_counter.items(), key=lambda kv: (-kv[1], kv[0]))),
         "tau_selection_breakdown": tau_breakdown,
+        "fnn_selection_breakdown": fnn_breakdown,
         "exponent_nonpositive": int((lle <= 0).sum()),
+        "lyapunov_time_nonpositive_lle": int(warning_counter.get("lyapunov_time_nonpositive_lle", 0)),
+        "lyapunov_time_near_zero_lle": int(warning_counter.get("lyapunov_time_near_zero_lle", 0)),
         "correlation_dimension_negative": int((cdim < 0).sum()),
         "embedding_dimension_out_of_bounds": int(((emb < m_min) | (emb > m_max)).sum()),
         "ranges": ranges,
@@ -601,11 +660,15 @@ def run_feature_block_d_pipeline(config_path: str = "configs/features_block_D_v1
     logger.info("Warning rows: %d", summary.get("warning_rows", 0))
     logger.info("Warning flag breakdown: %s", summary.get("warning_flag_breakdown", {}))
     logger.info("NaN embedding_dimension: %d", summary.get("nan_embedding_dimension", 0))
+    logger.info("NaN fnn_min_fraction: %d", summary.get("nan_fnn_min_fraction", 0))
     logger.info("NaN correlation_dimension: %d", summary.get("nan_correlation_dimension", 0))
     logger.info("NaN largest_lyapunov_exponent: %d", summary.get("nan_largest_lyapunov_exponent", 0))
     logger.info("NaN lyapunov_time: %d", summary.get("nan_lyapunov_time", 0))
     logger.info("Tau selection breakdown: %s", summary.get("tau_selection_breakdown", {}))
+    logger.info("FNN selection breakdown: %s", summary.get("fnn_selection_breakdown", {}))
     logger.info("largest_lyapunov_exponent <= 0: %d", summary.get("exponent_nonpositive", 0))
+    logger.info("lyapunov_time_nonpositive_lle: %d", summary.get("lyapunov_time_nonpositive_lle", 0))
+    logger.info("lyapunov_time_near_zero_lle: %d", summary.get("lyapunov_time_near_zero_lle", 0))
     logger.info("correlation_dimension < 0: %d", summary.get("correlation_dimension_negative", 0))
     logger.info("embedding_dimension outside bounds: %d", summary.get("embedding_dimension_out_of_bounds", 0))
     logger.info("Ranges: %s", summary.get("ranges", {}))

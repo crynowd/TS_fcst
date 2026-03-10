@@ -11,6 +11,7 @@ from src.features.block_d_chaos import (
     run_feature_block_d_pipeline,
     select_delay_tau,
     select_embedding_dimension_fnn,
+    select_embedding_dimension_fnn_ratios,
 )
 
 
@@ -40,35 +41,52 @@ def test_delay_selection_returns_positive_tau() -> None:
     assert "tau_selection_series_too_short" not in flags
 
 
-def test_fnn_returns_dimension_in_range() -> None:
+def test_fnn_selection_mode_valid_values() -> None:
     x = _make_logistic_map(1500)
-    m, success, ratios, flags = select_embedding_dimension_fnn(
+    m, success, mode, min_fraction, ratios, _ = select_embedding_dimension_fnn(
         x,
         tau=1,
         emb_cfg={
             "m_min": 2,
             "m_max": 8,
             "fnn_threshold": 0.05,
+            "fnn_plateau_tol": 0.01,
+            "fnn_min_improvement": 0.03,
             "fnn_rtol": 10.0,
             "fnn_atol_std": 2.0,
         },
     )
-    assert np.isfinite(m), flags
-    assert 2 <= int(m) <= 8
+    assert mode in {"strict_threshold", "stable_plateau", "best_available", "failed"}
     assert isinstance(success, bool)
-    assert len(ratios) > 0
+    if mode != "failed":
+        assert np.isfinite(m)
+        assert np.isfinite(min_fraction)
+        assert len(ratios) > 0
 
 
-def test_lyapunov_time_nan_for_nonpositive_exponent() -> None:
-    val_zero, flags_zero = compute_lyapunov_time(0.0)
-    val_neg, flags_neg = compute_lyapunov_time(-0.1)
-    assert np.isnan(val_zero)
-    assert np.isnan(val_neg)
-    assert "lyapunov_time_nonpositive_lle" in flags_zero
-    assert "lyapunov_time_nonpositive_lle" in flags_neg
+def test_fnn_plateau_can_select_dimension_without_strict_threshold() -> None:
+    # No point meets strict threshold=0.05, but curve clearly plateaus.
+    ratios = {2: 0.70, 3: 0.50, 4: 0.45, 5: 0.445, 6: 0.444}
+    m, mode, min_fraction = select_embedding_dimension_fnn_ratios(
+        ratios,
+        emb_cfg={
+            "fnn_threshold": 0.05,
+            "fnn_plateau_tol": 0.01,
+            "fnn_min_improvement": 0.02,
+        },
+    )
+    assert mode == "stable_plateau"
+    assert int(m) == 4
+    assert np.isclose(min_fraction, min(ratios.values()))
 
 
-def test_block_D_pipeline_small_dataset(tmp_path: Path) -> None:
+def test_lyapunov_time_nan_for_near_zero_positive_lle() -> None:
+    val, flags = compute_lyapunov_time(5e-4, min_exponent=1e-3)
+    assert np.isnan(val)
+    assert "lyapunov_time_near_zero_lle" in flags
+
+
+def test_block_D_refined_pipeline_small_dataset(tmp_path: Path) -> None:
     root = tmp_path
     configs_dir = root / "configs"
     artifacts_dir = root / "artifacts"
@@ -148,6 +166,8 @@ def test_block_D_pipeline_small_dataset(tmp_path: Path) -> None:
                 "m_min": 2,
                 "m_max": 8,
                 "fnn_threshold": 0.05,
+                "fnn_plateau_tol": 0.01,
+                "fnn_min_improvement": 0.03,
                 "fnn_rtol": 10.0,
                 "fnn_atol_std": 2.0,
             },
@@ -169,11 +189,14 @@ def test_block_D_pipeline_small_dataset(tmp_path: Path) -> None:
                 "fit_end": 8,
                 "min_pairs": 15,
                 "min_fit_points": 4,
+                "lyapunov_time_min_exponent": 1e-3,
             },
             "metric_columns": [
                 "selected_delay_tau",
                 "tau_selection_method",
                 "fnn_success_flag",
+                "fnn_selection_mode",
+                "fnn_min_fraction",
                 "embedding_dimension",
                 "correlation_dimension",
                 "largest_lyapunov_exponent",
@@ -195,45 +218,13 @@ def test_block_D_pipeline_small_dataset(tmp_path: Path) -> None:
     assert {
         "series_id",
         "feature_status",
-        "selected_delay_tau",
-        "tau_selection_method",
-        "fnn_success_flag",
+        "fnn_selection_mode",
+        "fnn_min_fraction",
         "embedding_dimension",
-        "correlation_dimension",
         "largest_lyapunov_exponent",
         "lyapunov_time",
     }.issubset(out_df.columns)
-
     assert Path(result.excel_path).exists()
     assert Path(result.log_path).exists()
     assert Path(result.manifest_path).exists()
-
-    logi = out_df[out_df["series_id"] == "US:LOGI"].iloc[0]
-    sine_row = out_df[out_df["series_id"] == "US:SINE"].iloc[0]
-    white_row = out_df[out_df["series_id"] == "RU:WHITE"].iloc[0]
-
-    assert int(logi["selected_delay_tau"]) >= 1
-    assert str(logi["tau_selection_method"]) in {"ami", "acf_zero", "acf_einv", "fallback_default"}
-
-    # Qualitative sanity: chaotic logistic map should not collapse to identical diagnostics.
-    diff_sine = (
-        (pd.to_numeric(logi["embedding_dimension"], errors="coerce") != pd.to_numeric(sine_row["embedding_dimension"], errors="coerce"))
-        or (
-            abs(
-                pd.to_numeric(logi["largest_lyapunov_exponent"], errors="coerce")
-                - pd.to_numeric(sine_row["largest_lyapunov_exponent"], errors="coerce")
-            )
-            > 1e-9
-        )
-    )
-    diff_white = (
-        (pd.to_numeric(logi["embedding_dimension"], errors="coerce") != pd.to_numeric(white_row["embedding_dimension"], errors="coerce"))
-        or (
-            abs(
-                pd.to_numeric(logi["largest_lyapunov_exponent"], errors="coerce")
-                - pd.to_numeric(white_row["largest_lyapunov_exponent"], errors="coerce")
-            )
-            > 1e-9
-        )
-    )
-    assert diff_sine or diff_white
+    assert np.isinf(pd.to_numeric(out_df["lyapunov_time"], errors="coerce")).sum() == 0

@@ -346,11 +346,13 @@ def export_features_block_d_excel(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     tau_breakdown = summary.get("tau_selection_breakdown", {})
+    fnn_breakdown = summary.get("fnn_selection_breakdown", {})
     summary_row: Dict[str, object] = {
         "dataset_profile": dataset_profile,
         "series_total": int(summary.get("series_total", 0)),
         "series_successful": int(summary.get("series_successful", 0)),
         "series_with_warnings": int(summary.get("series_with_warnings", 0)),
+        "nan_fnn_min_fraction": int(summary.get("nan_fnn_min_fraction", 0)),
         "nan_embedding_dimension": int(summary.get("nan_embedding_dimension", 0)),
         "nan_correlation_dimension": int(summary.get("nan_correlation_dimension", 0)),
         "nan_largest_lyapunov_exponent": int(summary.get("nan_largest_lyapunov_exponent", 0)),
@@ -359,7 +361,13 @@ def export_features_block_d_excel(
         "tau_acf_zero": int(tau_breakdown.get("acf_zero", 0)),
         "tau_acf_einv": int(tau_breakdown.get("acf_einv", 0)),
         "tau_fallback_default": int(tau_breakdown.get("fallback_default", 0)),
+        "fnn_strict_threshold": int(fnn_breakdown.get("strict_threshold", 0)),
+        "fnn_stable_plateau": int(fnn_breakdown.get("stable_plateau", 0)),
+        "fnn_best_available": int(fnn_breakdown.get("best_available", 0)),
+        "fnn_failed": int(fnn_breakdown.get("failed", 0)),
         "exponent_nonpositive": int(summary.get("exponent_nonpositive", 0)),
+        "lyapunov_time_nonpositive_lle": int(summary.get("lyapunov_time_nonpositive_lle", 0)),
+        "lyapunov_time_near_zero_lle": int(summary.get("lyapunov_time_near_zero_lle", 0)),
         "correlation_dimension_negative": int(summary.get("correlation_dimension_negative", 0)),
         "embedding_dimension_out_of_bounds": int(summary.get("embedding_dimension_out_of_bounds", 0)),
     }
@@ -368,6 +376,7 @@ def export_features_block_d_excel(
     range_metrics = [
         "selected_delay_tau",
         "embedding_dimension",
+        "fnn_min_fraction",
         "correlation_dimension",
         "largest_lyapunov_exponent",
         "lyapunov_time",

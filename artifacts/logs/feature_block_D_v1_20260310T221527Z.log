@@ -1,0 +1,27 @@
+2026-03-11 01:15:27 | INFO | Feature block D started
+2026-03-11 01:15:27 | INFO | Dataset profile: core_balanced
+2026-03-11 01:15:27 | INFO | Config path: D:\Projects\TS_fcst\configs\features_block_D_v1.yaml
+2026-03-11 01:15:27 | INFO | Input rows: 826608
+2026-03-11 01:15:27 | INFO | Input series: 418
+2026-03-11 01:17:33 | INFO | Output series: 418
+2026-03-11 01:17:33 | INFO | Series successful: 223
+2026-03-11 01:17:33 | INFO | Series with warnings: 195
+2026-03-11 01:17:33 | INFO | Warning rows: 195
+2026-03-11 01:17:33 | INFO | Warning flag breakdown: {'lyapunov_time_nonpositive_lle': 174, 'lyapunov_time_near_zero_lle': 21}
+2026-03-11 01:17:33 | INFO | NaN embedding_dimension: 0
+2026-03-11 01:17:33 | INFO | NaN fnn_min_fraction: 0
+2026-03-11 01:17:33 | INFO | NaN correlation_dimension: 0
+2026-03-11 01:17:33 | INFO | NaN largest_lyapunov_exponent: 0
+2026-03-11 01:17:33 | INFO | NaN lyapunov_time: 195
+2026-03-11 01:17:33 | INFO | Tau selection breakdown: {'ami': 418, 'acf_zero': 0, 'acf_einv': 0, 'fallback_default': 0}
+2026-03-11 01:17:33 | INFO | FNN selection breakdown: {'strict_threshold': 15, 'stable_plateau': 375, 'best_available': 28, 'failed': 0}
+2026-03-11 01:17:33 | INFO | largest_lyapunov_exponent <= 0: 174
+2026-03-11 01:17:33 | INFO | lyapunov_time_nonpositive_lle: 174
+2026-03-11 01:17:33 | INFO | lyapunov_time_near_zero_lle: 21
+2026-03-11 01:17:33 | INFO | correlation_dimension < 0: 0
+2026-03-11 01:17:33 | INFO | embedding_dimension outside bounds: 0
+2026-03-11 01:17:33 | INFO | Ranges: {'selected_delay_tau': {'min': 2.0, 'max': 11.0, 'mean': 3.949760765550239, 'median': 4.0}, 'embedding_dimension': {'min': 4.0, 'max': 10.0, 'mean': 6.29665071770335, 'median': 6.0}, 'fnn_min_fraction': {'min': 0.008585858585858586, 'max': 0.1409669211195929, 'mean': 0.09125629361355767, 'median': 0.09276782961736013}, 'correlation_dimension': {'min': 0.394764136143342, 'max': 5.915275742538066, 'mean': 3.4609163452465745, 'median': 3.4754852318630793}, 'largest_lyapunov_exponent': {'min': -0.04529131953817394, 'max': 0.05730420143123985, 'mean': 0.004369999957917122, 'median': 0.002257544677299816}, 'lyapunov_time': {'min': 17.450727434006993, 'max': 997.491153290975, 'mean': 139.5495228911284, 'median': 75.25802043739287}}
+2026-03-11 01:17:33 | INFO | Processing errors: 0
+2026-03-11 01:17:33 | INFO | Parquet path: D:\Projects\TS_fcst\artifacts\features\features_block_D_v1.parquet
+2026-03-11 01:17:33 | INFO | Excel path: D:\Projects\TS_fcst\artifacts\reports\features_block_D_v1.xlsx
+2026-03-11 01:17:33 | INFO | Execution time: 125.84 sec
