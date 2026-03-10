@@ -1,0 +1,77 @@
+{
+  "run_id": "feature_block_D_v1_20260310T215935Z",
+  "stage": "feature_block_D",
+  "timestamp_start": "2026-03-10T21:59:35.241326+00:00",
+  "timestamp_end": "2026-03-10T22:01:46.820774+00:00",
+  "git_commit": "02bcae357abb2de55720aed17decfe16c9d4ffe4",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\features_block_D_v1.yaml",
+  "config_hash": "582d0f62a6797e09f452852b762a2b716a12bfabf7c0799fb834427db27257cb",
+  "input_sources": {
+    "log_returns_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "dataset_profile": "core_balanced",
+    "input_series": 418
+  },
+  "outputs": {
+    "features_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_D_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\features_block_D_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_block_D_v1_20260310T215935Z.log"
+  },
+  "summary": {
+    "series_total": 418,
+    "series_successful": 11,
+    "series_with_warnings": 407,
+    "warning_rows": 407,
+    "warning_flag_breakdown": {
+      "fnn_threshold_not_met": 403,
+      "lyapunov_time_nonpositive_lle": 228
+    },
+    "tau_selection_breakdown": {
+      "ami": 418,
+      "acf_zero": 0,
+      "acf_einv": 0,
+      "fallback_default": 0
+    },
+    "exponent_nonpositive": 228,
+    "correlation_dimension_negative": 0,
+    "embedding_dimension_out_of_bounds": 0,
+    "ranges": {
+      "selected_delay_tau": {
+        "min": 2.0,
+        "max": 11.0,
+        "mean": 3.949760765550239,
+        "median": 4.0
+      },
+      "embedding_dimension": {
+        "min": 5.0,
+        "max": 10.0,
+        "mean": 8.447368421052632,
+        "median": 9.0
+      },
+      "correlation_dimension": {
+        "min": 0.394764136143342,
+        "max": 5.915275742538066,
+        "mean": 3.8316544631343787,
+        "median": 4.091540591193198
+      },
+      "largest_lyapunov_exponent": {
+        "min": -0.03630793352000109,
+        "max": 0.05730420143123985,
+        "mean": -0.0008463984429436084,
+        "median": -0.0008432633728793733
+      },
+      "lyapunov_time": {
+        "min": 17.450727434006993,
+        "max": 90967.00656980727,
+        "mean": 1060.1362567918454,
+        "median": 119.756262184284
+      }
+    },
+    "nan_selected_delay_tau": 0,
+    "nan_embedding_dimension": 0,
+    "nan_correlation_dimension": 0,
+    "nan_largest_lyapunov_exponent": 0,
+    "nan_lyapunov_time": 228,
+    "processing_errors": 0
+  }
+}

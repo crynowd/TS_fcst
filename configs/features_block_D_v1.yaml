@@ -1,0 +1,51 @@
+run_name: "feature_block_D_v1"
+stage: "feature_block_D"
+
+input:
+  log_returns_parquet: "artifacts/processed/log_returns_v1.parquet"
+  dataset_profiles_parquet: "artifacts/processed/dataset_profiles_v1.parquet"
+
+dataset_profile: "core_balanced"
+
+metrics:
+  minimum_series_length: 300
+  delay_selection:
+    method: "ami_with_fallbacks"
+    tau_min: 1
+    tau_max: 50
+    ami_bins: 24
+  embedding:
+    m_min: 2
+    m_max: 10
+    fnn_threshold: 0.05
+    fnn_rtol: 10.0
+    fnn_atol_std: 2.0
+  correlation_dimension:
+    enabled: true
+    radius_grid_size: 24
+    min_scaling_points: 6
+    min_r2: 0.9
+    radius_quantile_low: 0.05
+    radius_quantile_high: 0.8
+    max_points: 800
+  lyapunov:
+    method: "rosenstein"
+    theiler_window: 10
+    neighbor_search_k: 50
+    trajectory_len: 20
+    fit_start: 1
+    fit_end: 10
+    min_pairs: 20
+    min_fit_points: 5
+  metric_columns:
+    - selected_delay_tau
+    - tau_selection_method
+    - fnn_success_flag
+    - embedding_dimension
+    - correlation_dimension
+    - largest_lyapunov_exponent
+    - lyapunov_time
+
+output:
+  parquet_name: "features_block_D_v1.parquet"
+  excel_name: "features_block_D_v1.xlsx"

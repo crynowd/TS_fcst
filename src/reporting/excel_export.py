@@ -328,3 +328,91 @@ def export_features_block_c_excel(
         readme_df.to_excel(writer, sheet_name="readme", index=False)
 
     return out_path
+
+
+def export_features_block_d_excel(
+    features_df: pd.DataFrame,
+    summary: Dict[str, object],
+    warnings_df: pd.DataFrame,
+    excel_path: str | Path,
+    run_id: str,
+    dataset_profile: str,
+    input_paths: Dict[str, str],
+    output_parquet: str,
+    config_params: Dict[str, Any],
+) -> Path:
+    """Export feature block D artifacts into a multi-sheet Excel report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    tau_breakdown = summary.get("tau_selection_breakdown", {})
+    summary_row: Dict[str, object] = {
+        "dataset_profile": dataset_profile,
+        "series_total": int(summary.get("series_total", 0)),
+        "series_successful": int(summary.get("series_successful", 0)),
+        "series_with_warnings": int(summary.get("series_with_warnings", 0)),
+        "nan_embedding_dimension": int(summary.get("nan_embedding_dimension", 0)),
+        "nan_correlation_dimension": int(summary.get("nan_correlation_dimension", 0)),
+        "nan_largest_lyapunov_exponent": int(summary.get("nan_largest_lyapunov_exponent", 0)),
+        "nan_lyapunov_time": int(summary.get("nan_lyapunov_time", 0)),
+        "tau_ami": int(tau_breakdown.get("ami", 0)),
+        "tau_acf_zero": int(tau_breakdown.get("acf_zero", 0)),
+        "tau_acf_einv": int(tau_breakdown.get("acf_einv", 0)),
+        "tau_fallback_default": int(tau_breakdown.get("fallback_default", 0)),
+        "exponent_nonpositive": int(summary.get("exponent_nonpositive", 0)),
+        "correlation_dimension_negative": int(summary.get("correlation_dimension_negative", 0)),
+        "embedding_dimension_out_of_bounds": int(summary.get("embedding_dimension_out_of_bounds", 0)),
+    }
+    summary_df = pd.DataFrame([summary_row])
+
+    range_metrics = [
+        "selected_delay_tau",
+        "embedding_dimension",
+        "correlation_dimension",
+        "largest_lyapunov_exponent",
+        "lyapunov_time",
+    ]
+    rows = []
+    for col in range_metrics:
+        if col not in features_df.columns:
+            continue
+        vals = pd.to_numeric(features_df[col], errors="coerce")
+        rows.append(
+            {
+                "metric": col,
+                "min": float(vals.min()) if vals.notna().any() else None,
+                "max": float(vals.max()) if vals.notna().any() else None,
+                "mean": float(vals.mean()) if vals.notna().any() else None,
+                "median": float(vals.median()) if vals.notna().any() else None,
+            }
+        )
+    ranges_df = pd.DataFrame(rows)
+
+    readme_df = pd.DataFrame(
+        [
+            {"key": "run_id", "value": run_id},
+            {"key": "stage", "value": "feature_block_D"},
+            {"key": "dataset_profile", "value": dataset_profile},
+            {"key": "input_log_returns_parquet", "value": input_paths.get("log_returns_parquet", "")},
+            {"key": "input_dataset_profiles_parquet", "value": input_paths.get("dataset_profiles_parquet", "")},
+            {"key": "output_features_parquet", "value": output_parquet},
+            {
+                "key": "metrics",
+                "value": "Embedding dimension (FNN), correlation dimension, largest Lyapunov exponent (Rosenstein), Lyapunov time",
+            },
+            {"key": "delay_selection", "value": str(config_params.get("delay_selection", {}))},
+            {"key": "embedding", "value": str(config_params.get("embedding", {}))},
+            {"key": "correlation_dimension", "value": str(config_params.get("correlation_dimension", {}))},
+            {"key": "lyapunov", "value": str(config_params.get("lyapunov", {}))},
+            {"key": "minimum_series_length", "value": str(config_params.get("minimum_series_length", ""))},
+        ]
+    )
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        features_df.to_excel(writer, sheet_name="features_block_D", index=False)
+        warnings_df.to_excel(writer, sheet_name="warnings", index=False)
+        ranges_df.to_excel(writer, sheet_name="ranges", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path

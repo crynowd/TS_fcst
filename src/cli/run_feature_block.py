@@ -10,7 +10,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--block",
         required=True,
-        help="Feature block code (currently supported: A, B, C)",
+        help="Feature block code (currently supported: A, B, C, D)",
     )
     parser.add_argument(
         "--config",
@@ -31,6 +31,8 @@ def main() -> None:
             config_path = "configs/features_block_B_v1.yaml"
         elif block == "C":
             config_path = "configs/features_block_C_v1.yaml"
+        elif block == "D":
+            config_path = "configs/features_block_D_v1.yaml"
     result = run_feature_block(block, config_path)
     print(
         "run_id={run_id} input_series={input_series} output_series={output_series} "
