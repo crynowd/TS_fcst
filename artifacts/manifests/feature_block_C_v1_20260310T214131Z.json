@@ -1,0 +1,75 @@
+{
+  "run_id": "feature_block_C_v1_20260310T214131Z",
+  "stage": "feature_block_C",
+  "timestamp_start": "2026-03-10T21:41:31.976758+00:00",
+  "timestamp_end": "2026-03-10T21:41:33.383551+00:00",
+  "git_commit": "17b3bd05c7d8f9b1075d69414dfd3717c1fcdaa3",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\features_block_C_v1.yaml",
+  "config_hash": "1b55bf59d10b3398a3380532d2a5582ce2ff3f89c0dcf8184368b1fb16df0511",
+  "input_sources": {
+    "log_returns_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "dataset_profile": "core_balanced",
+    "input_series": 418
+  },
+  "outputs": {
+    "features_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_C_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\features_block_C_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_block_C_v1_20260310T214131Z.log"
+  },
+  "summary": {
+    "series_total": 418,
+    "series_successful": 0,
+    "series_with_warnings": 418,
+    "kurtosis_lt_0": 0,
+    "tail_ratio_symmetric_negative": 0,
+    "tail_ratio_upper_negative": 0,
+    "tail_ratio_lower_negative": 0,
+    "hill_tail_index_gt_10": 0,
+    "ranges": {
+      "kurtosis": {
+        "min": 1.3493529158361302,
+        "max": 965.0027899355139,
+        "mean": 40.242218995358584,
+        "median": 17.75409952601901
+      },
+      "robust_kurtosis": {
+        "min": 1.2525909829035535,
+        "max": 2.786708077369869,
+        "mean": 1.570934307768045,
+        "median": 1.5290339461708995
+      },
+      "tail_ratio_symmetric": {
+        "min": 4.18989635107559,
+        "max": 21.500345936179333,
+        "mean": 7.303999072600522,
+        "median": 6.317215306698355
+      },
+      "tail_ratio_upper": {
+        "min": 3.7555752226465238,
+        "max": 33.67796057582813,
+        "mean": 8.469904291531908,
+        "median": 6.564572123397042
+      },
+      "tail_ratio_lower": {
+        "min": 4.223202784742617,
+        "max": 16.989511968793796,
+        "mean": 6.511106345141338,
+        "median": 6.145079939030782
+      },
+      "hill_tail_index": {
+        "min": 0.6708825993519256,
+        "max": 4.622696118579049,
+        "mean": 2.6703425530703555,
+        "median": 2.6536644723211174
+      }
+    },
+    "nan_kurtosis": 0,
+    "nan_robust_kurtosis": 0,
+    "nan_tail_ratio_symmetric": 0,
+    "nan_tail_ratio_upper": 0,
+    "nan_tail_ratio_lower": 0,
+    "nan_hill_tail_index": 0,
+    "processing_errors": 0
+  }
+}

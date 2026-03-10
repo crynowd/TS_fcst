@@ -1,0 +1,23 @@
+2026-03-11 00:42:02 | INFO | Feature block C started
+2026-03-11 00:42:02 | INFO | Dataset profile: core_balanced
+2026-03-11 00:42:02 | INFO | Config path: D:\Projects\TS_fcst\configs\features_block_C_v1.yaml
+2026-03-11 00:42:03 | INFO | Input rows: 826608
+2026-03-11 00:42:03 | INFO | Input series: 418
+2026-03-11 00:42:04 | INFO | Output series: 418
+2026-03-11 00:42:04 | INFO | Series successful: 418
+2026-03-11 00:42:04 | INFO | Series with warnings: 0
+2026-03-11 00:42:04 | INFO | NaN kurtosis: 0
+2026-03-11 00:42:04 | INFO | NaN robust_kurtosis: 0
+2026-03-11 00:42:04 | INFO | NaN tail_ratio_symmetric: 0
+2026-03-11 00:42:04 | INFO | NaN tail_ratio_upper: 0
+2026-03-11 00:42:04 | INFO | NaN tail_ratio_lower: 0
+2026-03-11 00:42:04 | INFO | NaN hill_tail_index: 0
+2026-03-11 00:42:04 | INFO | kurtosis < 0: 0
+2026-03-11 00:42:04 | INFO | tail_ratio_symmetric < 0: 0
+2026-03-11 00:42:04 | INFO | tail_ratio_upper < 0: 0
+2026-03-11 00:42:04 | INFO | tail_ratio_lower < 0: 0
+2026-03-11 00:42:04 | INFO | hill_tail_index > 10: 0
+2026-03-11 00:42:04 | INFO | Processing errors: 0
+2026-03-11 00:42:04 | INFO | Parquet path: D:\Projects\TS_fcst\artifacts\features\features_block_C_v1.parquet
+2026-03-11 00:42:04 | INFO | Excel path: D:\Projects\TS_fcst\artifacts\reports\features_block_C_v1.xlsx
+2026-03-11 00:42:04 | INFO | Execution time: 1.27 sec

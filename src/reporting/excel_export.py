@@ -244,3 +244,87 @@ def export_features_block_b_excel(
         readme_df.to_excel(writer, sheet_name="readme", index=False)
 
     return out_path
+
+
+def export_features_block_c_excel(
+    features_df: pd.DataFrame,
+    summary: Dict[str, object],
+    warnings_df: pd.DataFrame,
+    excel_path: str | Path,
+    run_id: str,
+    dataset_profile: str,
+    input_paths: Dict[str, str],
+    output_parquet: str,
+    config_params: Dict[str, Any],
+) -> Path:
+    """Export feature block C artifacts into a multi-sheet Excel report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    metric_columns = [
+        "kurtosis",
+        "robust_kurtosis",
+        "tail_ratio_symmetric",
+        "tail_ratio_upper",
+        "tail_ratio_lower",
+        "hill_tail_index",
+    ]
+
+    summary_row: Dict[str, object] = {
+        "dataset_profile": dataset_profile,
+        "series_total": int(summary.get("series_total", 0)),
+        "series_successful": int(summary.get("series_successful", 0)),
+        "series_with_warnings": int(summary.get("series_with_warnings", 0)),
+        "kurtosis_lt_0": int(summary.get("kurtosis_lt_0", 0)),
+        "tail_ratio_symmetric_negative": int(summary.get("tail_ratio_symmetric_negative", 0)),
+        "tail_ratio_upper_negative": int(summary.get("tail_ratio_upper_negative", 0)),
+        "tail_ratio_lower_negative": int(summary.get("tail_ratio_lower_negative", 0)),
+        "hill_tail_index_gt_10": int(summary.get("hill_tail_index_gt_10", 0)),
+    }
+    for metric in metric_columns:
+        summary_row[f"nan_{metric}"] = int(summary.get(f"nan_{metric}", 0))
+
+    summary_df = pd.DataFrame([summary_row])
+
+    rows = []
+    for col in metric_columns:
+        if col not in features_df.columns:
+            continue
+        vals = pd.to_numeric(features_df[col], errors="coerce")
+        rows.append(
+            {
+                "metric": col,
+                "min": float(vals.min()) if vals.notna().any() else None,
+                "max": float(vals.max()) if vals.notna().any() else None,
+                "mean": float(vals.mean()) if vals.notna().any() else None,
+                "median": float(vals.median()) if vals.notna().any() else None,
+            }
+        )
+    ranges_df = pd.DataFrame(rows)
+
+    readme_df = pd.DataFrame(
+        [
+            {"key": "run_id", "value": run_id},
+            {"key": "stage", "value": "feature_block_C"},
+            {"key": "dataset_profile", "value": dataset_profile},
+            {"key": "input_log_returns_parquet", "value": input_paths.get("log_returns_parquet", "")},
+            {"key": "input_dataset_profiles_parquet", "value": input_paths.get("dataset_profiles_parquet", "")},
+            {"key": "output_features_parquet", "value": output_parquet},
+            {
+                "key": "metrics",
+                "value": "Kurtosis (Fisher), Moors robust kurtosis, quantile tail ratios, reserve Hill tail index",
+            },
+            {"key": "quantiles", "value": str(config_params.get("quantiles", []))},
+            {"key": "hill_k_fraction", "value": str(config_params.get("hill_k_fraction", 0.05))},
+            {"key": "use_hill", "value": str(config_params.get("use_hill", True))},
+        ]
+    )
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        features_df.to_excel(writer, sheet_name="features_block_C", index=False)
+        warnings_df.to_excel(writer, sheet_name="warnings", index=False)
+        ranges_df.to_excel(writer, sheet_name="ranges", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path

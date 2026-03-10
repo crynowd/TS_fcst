@@ -1,0 +1,28 @@
+run_name: "feature_block_C_v1"
+stage: "feature_block_C"
+
+input:
+  log_returns_parquet: "artifacts/processed/log_returns_v1.parquet"
+  dataset_profiles_parquet: "artifacts/processed/dataset_profiles_v1.parquet"
+
+dataset_profile: "core_balanced"
+
+metrics:
+  quantiles:
+    - 0.01
+    - 0.25
+    - 0.75
+    - 0.99
+  hill_k_fraction: 0.05
+  use_hill: true
+
+output:
+  parquet_name: "features_block_C_v1.parquet"
+  excel_name: "features_block_C_v1.xlsx"
+  metric_columns:
+    - kurtosis
+    - robust_kurtosis
+    - tail_ratio_symmetric
+    - tail_ratio_upper
+    - tail_ratio_lower
+    - hill_tail_index
