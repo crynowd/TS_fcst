@@ -1,0 +1,56 @@
+2026-03-10 23:32:59 | INFO | Log-returns pipeline run started
+2026-03-10 23:32:59 | INFO | Config path: D:\Projects\TS_fcst\configs\data_inventory_v1.yaml
+2026-03-10 23:32:59 | INFO | Input catalog path: D:\Projects\TS_fcst\artifacts\processed\series_catalog_v1.parquet
+2026-03-10 23:33:00 | INFO | Input series count: 7444
+2026-03-10 23:33:00 | INFO | Length policy: target=2000 min=1500 slice_mode=last_n
+2026-03-10 23:33:02 | WARNING | Series processing failed [RU:YRSB]: Close series must be strictly positive
+2026-03-10 23:33:03 | WARNING | Series processing failed [US:accp.us]: No columns to parse from file
+2026-03-10 23:33:05 | WARNING | Series processing failed [US:amrh.us]: No columns to parse from file
+2026-03-10 23:33:05 | WARNING | Series processing failed [US:amrhw.us]: No columns to parse from file
+2026-03-10 23:33:06 | WARNING | Series processing failed [US:asns.us]: No columns to parse from file
+2026-03-10 23:33:08 | WARNING | Series processing failed [US:band.us]: Returns series is empty after differencing
+2026-03-10 23:33:08 | WARNING | Series processing failed [US:bbrx.us]: No columns to parse from file
+2026-03-10 23:33:10 | WARNING | Series processing failed [US:bolt.us]: No columns to parse from file
+2026-03-10 23:33:10 | WARNING | Series processing failed [US:boxl.us]: No columns to parse from file
+2026-03-10 23:33:11 | WARNING | Series processing failed [US:bxg.us]: No columns to parse from file
+2026-03-10 23:33:12 | WARNING | Series processing failed [US:ccv-cl.us]: Returns series is empty after differencing
+2026-03-10 23:33:20 | WARNING | Series processing failed [US:ehr.us]: No columns to parse from file
+2026-03-10 23:33:21 | WARNING | Series processing failed [US:eryp.us]: Returns series is empty after differencing
+2026-03-10 23:33:23 | WARNING | Series processing failed [US:flmx.us]: Returns series is empty after differencing
+2026-03-10 23:33:23 | WARNING | Series processing failed [US:fmax.us]: No columns to parse from file
+2026-03-10 23:33:26 | WARNING | Series processing failed [US:gnst.us]: No columns to parse from file
+2026-03-10 23:33:27 | WARNING | Series processing failed [US:hayu.us]: No columns to parse from file
+2026-03-10 23:33:32 | WARNING | Series processing failed [US:jdiv.us]: Returns series is empty after differencing
+2026-03-10 23:33:32 | WARNING | Series processing failed [US:jhsc.us]: Returns series is empty after differencing
+2026-03-10 23:33:32 | WARNING | Series processing failed [US:jmom.us]: Returns series is empty after differencing
+2026-03-10 23:33:32 | WARNING | Series processing failed [US:jt.us]: No columns to parse from file
+2026-03-10 23:33:36 | WARNING | Series processing failed [US:mapi.us]: No columns to parse from file
+2026-03-10 23:33:38 | WARNING | Series processing failed [US:molc.us]: No columns to parse from file
+2026-03-10 23:33:43 | WARNING | Series processing failed [US:omfl.us]: Returns series is empty after differencing
+2026-03-10 23:33:43 | WARNING | Series processing failed [US:omfs.us]: Returns series is empty after differencing
+2026-03-10 23:33:43 | WARNING | Series processing failed [US:otg.us]: No columns to parse from file
+2026-03-10 23:33:44 | WARNING | Series processing failed [US:pbio.us]: No columns to parse from file
+2026-03-10 23:33:46 | WARNING | Series processing failed [US:ppdf.us]: Returns series is empty after differencing
+2026-03-10 23:33:47 | WARNING | Series processing failed [US:pxus.us]: No columns to parse from file
+2026-03-10 23:33:47 | WARNING | Series processing failed [US:rbio.us]: No columns to parse from file
+2026-03-10 23:33:49 | WARNING | Series processing failed [US:sail.us]: No columns to parse from file
+2026-03-10 23:33:50 | WARNING | Series processing failed [US:sbt.us]: No columns to parse from file
+2026-03-10 23:33:50 | WARNING | Series processing failed [US:scci.us]: No columns to parse from file
+2026-03-10 23:33:50 | WARNING | Series processing failed [US:scph.us]: No columns to parse from file
+2026-03-10 23:33:50 | WARNING | Series processing failed [US:send.us]: No columns to parse from file
+2026-03-10 23:33:50 | WARNING | Series processing failed [US:sfix.us]: No columns to parse from file
+2026-03-10 23:33:52 | WARNING | Series processing failed [US:srva.us]: No columns to parse from file
+2026-03-10 23:33:53 | WARNING | Series processing failed [US:stnl.us]: No columns to parse from file
+2026-03-10 23:33:58 | WARNING | Series processing failed [US:vist.us]: No columns to parse from file
+2026-03-10 23:33:58 | WARNING | Series processing failed [US:vmet.us]: No columns to parse from file
+2026-03-10 23:34:00 | WARNING | Series processing failed [US:wnfm.us]: No columns to parse from file
+2026-03-10 23:34:00 | WARNING | Series processing failed [US:wspt.us]: No columns to parse from file
+2026-03-10 23:34:01 | WARNING | Series processing failed [US:znwaa.us]: No columns to parse from file
+2026-03-10 23:34:03 | INFO | Excluded (<1500): 3279
+2026-03-10 23:34:03 | INFO | Series with returns >= 2000: 3625
+2026-03-10 23:34:03 | INFO | Short series (1500..1999): 497
+2026-03-10 23:34:03 | INFO | Valid RU series: 209
+2026-03-10 23:34:03 | INFO | Valid US series: 3913
+2026-03-10 23:34:03 | INFO | Core dataset size: 418
+2026-03-10 23:34:03 | INFO | Extended dataset size: 1009
+2026-03-10 23:34:03 | INFO | Execution time: 64.19 sec

@@ -1,0 +1,31 @@
+{
+  "run_id": "log_returns_v1_20260310T203559Z",
+  "stage": "log_returns_pipeline",
+  "timestamp_start": "2026-03-10T20:35:59.848586+00:00",
+  "timestamp_end": "2026-03-10T20:37:03.985122+00:00",
+  "git_commit": "f8512921fdad66ad381b04130450dfa586fc36d3",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\data_inventory_v1.yaml",
+  "config_hash": "811c396c20be7c30f74aa47523ec20b550d648954999826bc8d52fc39ebd1aca",
+  "inputs": {
+    "series_catalog_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\series_catalog_v1.parquet",
+    "ru_daily": "D:/Projects/Data/Stocks/ru/D1",
+    "us_daily": "D:/Projects/Data/Stocks/us/Stocks"
+  },
+  "outputs": {
+    "log_returns_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\log_returns_summary_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\log_returns_v1_20260310T203559Z.log"
+  },
+  "summary": {
+    "input_series": 7444,
+    "excluded_too_short": 3279,
+    "ge_target_count": 3625,
+    "short_series_count": 497,
+    "valid_ru": 209,
+    "valid_us": 3913,
+    "core_size": 418,
+    "extended_size": 1009,
+    "processing_errors": 43
+  }
+}
