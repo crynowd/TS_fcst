@@ -1,0 +1,22 @@
+project_root: "D:/Projects/TS_fcst"
+
+data_sources:
+
+  ru_daily: "D:/Projects/Data/Stocks/ru/D1"
+
+  us_daily: "D:/Projects/Data/Stocks/us/Stocks"
+
+
+artifacts:
+
+  interim: "D:/Projects/TS_fcst/artifacts/interim"
+
+  processed: "D:/Projects/TS_fcst/artifacts/processed"
+
+  features: "D:/Projects/TS_fcst/artifacts/features"
+
+  reports: "D:/Projects/TS_fcst/artifacts/reports"
+
+  logs: "D:/Projects/TS_fcst/artifacts/logs"
+
+  manifests: "D:/Projects/TS_fcst/artifacts/manifests"

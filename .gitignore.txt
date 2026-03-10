@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Artifacts (generated files)
+artifacts/interim/
+artifacts/processed/
+artifacts/features/
+artifacts/logs/
+artifacts/manifests/
+artifacts/reports/
+
+# Data formats
+*.parquet
+*.xlsx
+*.xls
+*.log
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
