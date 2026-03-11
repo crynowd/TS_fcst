@@ -1,0 +1,16 @@
+2026-03-11 10:23:15 | INFO | Feature screening started
+2026-03-11 10:23:15 | INFO | Dataset profile: core_balanced
+2026-03-11 10:23:15 | INFO | Config path: D:\Projects\TS_fcst\configs\feature_screening_v1.yaml
+2026-03-11 10:23:15 | INFO | Feature files loaded: 4
+2026-03-11 10:23:15 | INFO | Master rows: 418
+2026-03-11 10:23:15 | INFO | Master columns: 141
+2026-03-11 10:23:15 | INFO | Feature columns: 115
+2026-03-11 10:23:16 | INFO | Features with high missingness: 1
+2026-03-11 10:23:16 | INFO | Features with low variance: 1
+2026-03-11 10:23:16 | INFO | High-correlation pairs: 112
+2026-03-11 10:23:16 | INFO | Screening status counts: {'keep_candidate': 63, 'review_highly_correlated': 43, 'reserve_candidate': 5, 'review_low_variance': 3, 'review_high_missing': 1}
+2026-03-11 10:23:17 | INFO | Master parquet path: D:\Projects\TS_fcst\artifacts\features\features_master_v1.parquet
+2026-03-11 10:23:17 | INFO | Excel report path: D:\Projects\TS_fcst\artifacts\reports\feature_screening_v1.xlsx
+2026-03-11 10:23:17 | INFO | High correlation CSV path: D:\Projects\TS_fcst\artifacts\reports\high_correlation_pairs_v1.csv
+2026-03-11 10:23:17 | INFO | Shortlist CSV path: D:\Projects\TS_fcst\artifacts\reports\screening_shortlist_v1.csv
+2026-03-11 10:23:17 | INFO | Execution time: 1.93 sec

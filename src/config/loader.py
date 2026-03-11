@@ -140,3 +140,49 @@ def load_feature_block_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_feature_screening_config(config_path: str) -> Dict[str, Any]:
+    """Load feature-screening config merged with local artifact paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    input_cfg = dict(stage_cfg.get("input", {}))
+    for key, value in list(input_cfg.items()):
+        if not value:
+            continue
+        p = Path(str(value))
+        input_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "feature_screening_v1"),
+        "stage": stage_cfg.get("stage", "feature_screening"),
+        "input": input_cfg,
+        "dataset_profile": stage_cfg.get("dataset_profile", "core_balanced"),
+        "screening": stage_cfg.get("screening", {}),
+        "output": stage_cfg.get("output", {}),
+        "artifacts": paths_cfg.get("artifacts", {}),
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        },
+    }
+
+    required_root_keys = ["input", "screening", "output", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged

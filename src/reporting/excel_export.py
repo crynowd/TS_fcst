@@ -425,3 +425,87 @@ def export_features_block_d_excel(
         readme_df.to_excel(writer, sheet_name="readme", index=False)
 
     return out_path
+
+
+def export_feature_screening_excel(
+    excel_path: str | Path,
+    run_id: str,
+    dataset_profile: str,
+    master_df: pd.DataFrame,
+    quality_df: pd.DataFrame,
+    corr_pairs_df: pd.DataFrame,
+    shortlist_df: pd.DataFrame,
+    summary: Dict[str, object],
+    input_paths: Dict[str, str],
+    output_parquet: str,
+    screening_cfg: Dict[str, Any],
+) -> Path:
+    """Export feature screening report to a multi-sheet Excel workbook."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                "dataset_profile": dataset_profile,
+                "n_rows": int(summary.get("rows", 0)),
+                "n_features": int(summary.get("features_total", 0)),
+                "n_numeric_features": int(summary.get("numeric_features", 0)),
+                "n_features_with_missingness": int(summary.get("features_with_missingness", 0)),
+                "n_features_low_variance": int(summary.get("features_low_variance", 0)),
+                "n_high_correlation_pairs": int(summary.get("high_correlation_pairs", 0)),
+                "screening_status_counts": str(summary.get("screening_status_counts", {})),
+            }
+        ]
+    )
+
+    preview_rows = int(screening_cfg.get("master_preview_rows", 200))
+    master_too_large = len(master_df) > preview_rows
+    master_sheet_df = master_df.head(preview_rows).copy() if master_too_large else master_df
+
+    readme_rows = [
+        {"key": "run_id", "value": run_id},
+        {"key": "stage", "value": "feature_screening"},
+        {"key": "dataset_profile", "value": dataset_profile},
+        {"key": "output_master_parquet", "value": output_parquet},
+        {"key": "master_sheet_rows", "value": str(len(master_sheet_df))},
+        {
+            "key": "master_sheet_mode",
+            "value": (
+                f"preview_first_{preview_rows}_rows"
+                if master_too_large
+                else "full_master_table"
+            ),
+        },
+        {"key": "high_missing_threshold", "value": str(screening_cfg.get("high_missing_threshold", ""))},
+        {"key": "low_variance_threshold", "value": str(screening_cfg.get("low_variance_threshold", ""))},
+        {
+            "key": "near_constant_unique_threshold",
+            "value": str(screening_cfg.get("near_constant_unique_threshold", "")),
+        },
+        {
+            "key": "high_correlation_threshold",
+            "value": str(screening_cfg.get("high_correlation_threshold", "")),
+        },
+        {"key": "warning_heavy_threshold", "value": str(screening_cfg.get("warning_heavy_threshold", ""))},
+        {
+            "key": "screening_logic",
+            "value": (
+                "high_missing=>review_high_missing; near_constant/low_variance=>review_low_variance; "
+                "warning_heavy in block D=>reserve_candidate; warning_heavy otherwise=>review_warning_heavy; "
+                "highly_correlated=>review_highly_correlated; else=>keep_candidate; missing_rate>=0.99=>drop_candidate"
+            ),
+        },
+        {"key": "input_feature_files", "value": "; ".join(f"{k}={v}" for k, v in input_paths.items())},
+    ]
+    readme_df = pd.DataFrame(readme_rows)
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        master_sheet_df.to_excel(writer, sheet_name="master_features", index=False)
+        quality_df.to_excel(writer, sheet_name="feature_quality", index=False)
+        corr_pairs_df.to_excel(writer, sheet_name="correlation_pairs", index=False)
+        shortlist_df.to_excel(writer, sheet_name="shortlist", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path

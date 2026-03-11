@@ -1,0 +1,25 @@
+run_name: "feature_screening_v1"
+stage: "feature_screening"
+
+input:
+  features_block_A_parquet: "artifacts/features/features_block_A_v1.parquet"
+  features_block_B_parquet: "artifacts/features/features_block_B_v1.parquet"
+  features_block_C_parquet: "artifacts/features/features_block_C_v1.parquet"
+  features_block_D_parquet: "artifacts/features/features_block_D_v1.parquet"
+  dataset_profiles_parquet: "artifacts/processed/dataset_profiles_v1.parquet"
+
+dataset_profile: "core_balanced"
+
+screening:
+  high_missing_threshold: 0.20
+  low_variance_threshold: 0.000001
+  near_constant_unique_threshold: 5
+  high_correlation_threshold: 0.90
+  warning_heavy_threshold: 0.30
+  master_preview_rows: 300
+
+output:
+  master_parquet_name: "features_master_v1.parquet"
+  excel_name: "feature_screening_v1.xlsx"
+  high_correlation_csv_name: "high_correlation_pairs_v1.csv"
+  shortlist_csv_name: "screening_shortlist_v1.csv"

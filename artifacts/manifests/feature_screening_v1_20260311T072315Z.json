@@ -1,0 +1,46 @@
+{
+  "run_id": "feature_screening_v1_20260311T072315Z",
+  "stage": "feature_screening",
+  "timestamp_start": "2026-03-11T07:23:15.346882+00:00",
+  "timestamp_end": "2026-03-11T07:23:17.273060+00:00",
+  "git_commit": "b75be04f4320da186ab76e211a4387f962e8af69",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\feature_screening_v1.yaml",
+  "config_hash": "1456e37d43d39421fe078d553aa3afe494dfa50ddc311eba462c50817b7bdfe3",
+  "input_sources": {
+    "features_block_A_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_A_v1.parquet",
+    "features_block_B_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_B_v1.parquet",
+    "features_block_C_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_C_v1.parquet",
+    "features_block_D_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_block_D_v1.parquet",
+    "dataset_profiles_parquet": "D:\\Projects\\TS_fcst\\artifacts\\processed\\dataset_profiles_v1.parquet",
+    "dataset_profile": "core_balanced",
+    "rows_by_block": {
+      "A": 418,
+      "B": 418,
+      "C": 418,
+      "D": 418
+    }
+  },
+  "outputs": {
+    "master_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_master_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\feature_screening_v1.xlsx",
+    "high_correlation_pairs_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\high_correlation_pairs_v1.csv",
+    "screening_shortlist_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\screening_shortlist_v1.csv",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_screening_v1_20260311T072315Z.log"
+  },
+  "summary": {
+    "rows": 418,
+    "columns": 141,
+    "features_total": 115,
+    "numeric_features": 113,
+    "features_with_missingness": 1,
+    "features_low_variance": 1,
+    "high_correlation_pairs": 112,
+    "screening_status_counts": {
+      "keep_candidate": 63,
+      "review_highly_correlated": 43,
+      "reserve_candidate": 5,
+      "review_low_variance": 3,
+      "review_high_missing": 1
+    }
+  }
+}
