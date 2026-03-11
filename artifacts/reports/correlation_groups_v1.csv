@@ -1,0 +1,7 @@
+correlation_group_id,feature_names,group_size,source_blocks_present
+G001,abs_acf_lag_2;abs_acf_lag_3;abs_acf_lag_4;abs_acf_lag_5;iacf_absret_1_10;iacf_absret_1_100;iacf_absret_1_20;iacf_absret_1_250;iacf_absret_1_5;iacf_absret_1_50;lb_absret_p_10;lb_absret_p_20;lb_absret_p_5;lb_absret_p_50;lb_absret_stat_10;lb_absret_stat_20;lb_absret_stat_5;lb_absret_stat_50,18,A
+G002,iacf_abs_1_10;iacf_abs_1_100;iacf_abs_1_20;iacf_abs_1_250;iacf_abs_1_5;iacf_abs_1_50;lb_ret_p_10;lb_ret_p_20;lb_ret_p_5;lb_ret_p_50;lb_ret_stat_10;lb_ret_stat_20;lb_ret_stat_5;lb_ret_stat_50,14,A
+G003,acf_lag_1;noise_fn;spectral_slope_beta;vr_q10;vr_q2;vr_q5,6,A;B
+G004,sample_entropy;tail_ratio_symmetric;tail_ratio_upper,3,B;C
+G005,largest_lyapunov_exponent;selected_delay_tau,2,D
+G006,spectral_entropy;spectral_flatness,2,B

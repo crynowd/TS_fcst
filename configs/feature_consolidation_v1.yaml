@@ -1,0 +1,43 @@
+run_name: "feature_consolidation_v1"
+stage: "feature_consolidation"
+
+input:
+  features_master_parquet: "artifacts/features/features_master_v1.parquet"
+  high_correlation_pairs_csv: "artifacts/reports/high_correlation_pairs_v1.csv"
+  screening_shortlist_csv: "artifacts/reports/screening_shortlist_v1.csv"
+
+dataset_profile: "core_balanced"
+
+include_screening_statuses:
+  - "keep_candidate"
+  - "review_highly_correlated"
+  - "reserve_candidate"
+
+excluded_screening_statuses:
+  - "review_high_missing"
+  - "review_low_variance"
+  - "drop_candidate"
+
+high_correlation_threshold: 0.90
+
+representative_selection_priority:
+  - "keep_candidate"
+  - "reserve_candidate"
+  - "review_highly_correlated"
+
+include_chaos_in_extended_set: true
+
+pre_scaling:
+  robust_outlier_threshold: 0.05
+  rank_outlier_threshold: 0.15
+  robust_abs_skew_threshold: 1.0
+  rank_abs_skew_threshold: 2.0
+
+output:
+  base_parquet_name: "clustering_features_base_v1.parquet"
+  with_chaos_parquet_name: "clustering_features_with_chaos_v1.parquet"
+  correlation_groups_csv_name: "correlation_groups_v1.csv"
+  base_feature_list_csv_name: "clustering_features_base_list_v1.csv"
+  with_chaos_feature_list_csv_name: "clustering_features_with_chaos_list_v1.csv"
+  scaling_plan_csv_name: "clustering_scaling_plan_v1.csv"
+  excel_name: "feature_consolidation_v1.xlsx"

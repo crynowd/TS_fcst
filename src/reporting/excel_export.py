@@ -509,3 +509,118 @@ def export_feature_screening_excel(
         readme_df.to_excel(writer, sheet_name="readme", index=False)
 
     return out_path
+
+
+def export_feature_consolidation_excel(
+    excel_path: str | Path,
+    run_id: str,
+    dataset_profile: str,
+    summary: Dict[str, object],
+    candidate_pool_df: pd.DataFrame,
+    correlation_groups_df: pd.DataFrame,
+    representative_df: pd.DataFrame,
+    base_feature_set_df: pd.DataFrame,
+    chaos_feature_set_df: pd.DataFrame,
+    scaling_plan_df: pd.DataFrame,
+    input_paths: Dict[str, str],
+    output_paths: Dict[str, str],
+    config_params: Dict[str, object],
+) -> Path:
+    """Export feature consolidation report into a multi-sheet Excel workbook."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                "dataset_profile": dataset_profile,
+                "features_in_master": int(summary.get("master_features_total", 0)),
+                "candidate_pool_size": int(summary.get("candidate_pool_size", 0)),
+                "correlation_groups": int(summary.get("correlation_groups_count", 0)),
+                "representative_features": int(summary.get("representative_features_count", 0)),
+                "selected_base_features": int(summary.get("base_feature_count", 0)),
+                "selected_with_chaos_features": int(summary.get("with_chaos_feature_count", 0)),
+                "selected_by_source_block": str(summary.get("selected_by_block", {})),
+            }
+        ]
+    )
+
+    readme_rows = [
+        {"key": "run_id", "value": run_id},
+        {"key": "stage", "value": "feature_consolidation"},
+        {"key": "dataset_profile", "value": dataset_profile},
+        {"key": "inputs", "value": "; ".join(f"{k}={v}" for k, v in input_paths.items())},
+        {"key": "outputs", "value": "; ".join(f"{k}={v}" for k, v in output_paths.items())},
+        {
+            "key": "logic_candidate_pool",
+            "value": "includes statuses from include_screening_statuses; excluded statuses tracked in candidate_pool",
+        },
+        {
+            "key": "logic_representatives",
+            "value": (
+                "priority: screening_status -> missing_rate -> warning_coverage -> std(desc) -> interpretability"
+            ),
+        },
+        {
+            "key": "logic_feature_sets",
+            "value": "base excludes block D; with_chaos extends base with selected block D representatives",
+        },
+        {"key": "config", "value": str(config_params)},
+    ]
+    readme_df = pd.DataFrame(readme_rows)
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        candidate_pool_df.to_excel(writer, sheet_name="candidate_pool", index=False)
+        correlation_groups_df.to_excel(writer, sheet_name="correlation_groups", index=False)
+        representative_df.to_excel(writer, sheet_name="representative_selection", index=False)
+        base_feature_set_df.to_excel(writer, sheet_name="base_feature_set", index=False)
+        chaos_feature_set_df.to_excel(writer, sheet_name="chaos_feature_set", index=False)
+        scaling_plan_df.to_excel(writer, sheet_name="scaling_plan", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path
+
+
+def export_final_feature_sets_excel(
+    excel_path: str | Path,
+    run_id: str,
+    summary: Dict[str, object],
+    base_feature_set_df: pd.DataFrame,
+    with_chaos_feature_set_df: pd.DataFrame,
+    input_master_path: str,
+    output_paths: Dict[str, str],
+) -> Path:
+    """Export final manual feature subsets report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                "rows": int(summary.get("rows", 0)),
+                "base_feature_count": int(summary.get("base_feature_count", 0)),
+                "with_chaos_feature_count": int(summary.get("with_chaos_feature_count", 0)),
+                "breakdown_base": str(summary.get("breakdown_base", {})),
+                "breakdown_with_chaos": str(summary.get("breakdown_with_chaos", {})),
+            }
+        ]
+    )
+
+    readme_df = pd.DataFrame(
+        [
+            {"key": "run_id", "value": run_id},
+            {"key": "stage", "value": "final_feature_sets"},
+            {"key": "input_master_table", "value": input_master_path},
+            {"key": "outputs", "value": "; ".join(f"{k}={v}" for k, v in output_paths.items())},
+            {"key": "selection_policy", "value": "manual fixed feature list from user-approved subset"},
+        ]
+    )
+
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        base_feature_set_df.to_excel(writer, sheet_name="base_feature_set", index=False)
+        with_chaos_feature_set_df.to_excel(writer, sheet_name="with_chaos_feature_set", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+
+    return out_path

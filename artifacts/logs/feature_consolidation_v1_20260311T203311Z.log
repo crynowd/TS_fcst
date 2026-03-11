@@ -1,0 +1,15 @@
+2026-03-11 23:33:11 | INFO | Feature consolidation started
+2026-03-11 23:33:11 | INFO | Dataset profile: core_balanced
+2026-03-11 23:33:11 | INFO | Config path: D:\Projects\TS_fcst\configs\feature_consolidation_v1.yaml
+2026-03-11 23:33:12 | INFO | Master table size: rows=418 cols=141
+2026-03-11 23:33:12 | INFO | Candidate pool size: 111
+2026-03-11 23:33:12 | INFO | Correlation groups: 6
+2026-03-11 23:33:12 | INFO | Representative features selected: 72
+2026-03-11 23:33:12 | INFO | Features in base set: 68
+2026-03-11 23:33:12 | INFO | Features in with-chaos set: 72
+2026-03-11 23:33:12 | INFO | Base parquet path: D:\Projects\TS_fcst\artifacts\features\clustering_features_base_v1.parquet
+2026-03-11 23:33:12 | INFO | With-chaos parquet path: D:\Projects\TS_fcst\artifacts\features\clustering_features_with_chaos_v1.parquet
+2026-03-11 23:33:12 | INFO | Correlation groups CSV path: D:\Projects\TS_fcst\artifacts\reports\correlation_groups_v1.csv
+2026-03-11 23:33:12 | INFO | Scaling plan CSV path: D:\Projects\TS_fcst\artifacts\reports\clustering_scaling_plan_v1.csv
+2026-03-11 23:33:12 | INFO | Excel report path: D:\Projects\TS_fcst\artifacts\reports\feature_consolidation_v1.xlsx
+2026-03-11 23:33:12 | INFO | Execution time: 0.59 sec

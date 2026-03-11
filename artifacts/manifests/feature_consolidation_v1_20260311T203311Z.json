@@ -1,0 +1,39 @@
+{
+  "run_id": "feature_consolidation_v1_20260311T203311Z",
+  "stage": "feature_consolidation",
+  "timestamp_start": "2026-03-11T20:33:11.984463+00:00",
+  "timestamp_end": "2026-03-11T20:33:12.574967+00:00",
+  "git_commit": "3c42ba0317709721600d3dc673e5d928288af74a",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\feature_consolidation_v1.yaml",
+  "config_hash": "15b7b0391a5f9b62740d122109b395bee11698380ad480dd8405ebad8fb4cb8a",
+  "input_sources": {
+    "features_master_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\features_master_v1.parquet",
+    "high_correlation_pairs_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\high_correlation_pairs_v1.csv",
+    "screening_shortlist_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\screening_shortlist_v1.csv",
+    "dataset_profile": "core_balanced"
+  },
+  "outputs": {
+    "base_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\clustering_features_base_v1.parquet",
+    "with_chaos_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\clustering_features_with_chaos_v1.parquet",
+    "correlation_groups_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\correlation_groups_v1.csv",
+    "base_feature_list_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_features_base_list_v1.csv",
+    "with_chaos_feature_list_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_features_with_chaos_list_v1.csv",
+    "scaling_plan_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_scaling_plan_v1.csv",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\feature_consolidation_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\feature_consolidation_v1_20260311T203311Z.log"
+  },
+  "summary": {
+    "master_features_total": 115,
+    "candidate_pool_size": 111,
+    "correlation_groups_count": 6,
+    "representative_features_count": 72,
+    "base_feature_count": 68,
+    "with_chaos_feature_count": 72,
+    "selected_by_block": {
+      "A": 60,
+      "B": 3,
+      "C": 5,
+      "D": 4
+    }
+  }
+}
