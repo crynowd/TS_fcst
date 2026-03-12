@@ -624,3 +624,23 @@ def export_final_feature_sets_excel(
         readme_df.to_excel(writer, sheet_name="readme", index=False)
 
     return out_path
+
+
+def export_clustering_experiments_excel(
+    excel_path: str | Path,
+    summary_df: pd.DataFrame,
+    grid_results_df: pd.DataFrame,
+    top_configs_df: pd.DataFrame,
+    stability_df: pd.DataFrame,
+    readme_df: pd.DataFrame,
+) -> Path:
+    """Export clustering experiments report into a multi-sheet workbook."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        grid_results_df.to_excel(writer, sheet_name="grid_results", index=False)
+        top_configs_df.to_excel(writer, sheet_name="top_configs", index=False)
+        stability_df.to_excel(writer, sheet_name="stability", index=False)
+        readme_df.to_excel(writer, sheet_name="config_readme", index=False)
+    return out_path

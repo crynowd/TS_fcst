@@ -6,3 +6,4 @@ openpyxl
 pyarrow
 PyYAML
 pytest
+scikit-learn

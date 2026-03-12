@@ -1,0 +1,31 @@
+{
+  "run_id": "clustering_experiments_v1_20260312T103148Z",
+  "stage": "clustering_experiments",
+  "timestamp_start": "2026-03-12T10:31:48.549281+00:00",
+  "timestamp_end": "2026-03-12T10:33:00.211470+00:00",
+  "git_commit": "cfd4aaee1451db02cb6cf12c026877224b6c37a5",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\clustering_experiments_v1.yaml",
+  "config_hash": "9b51ecbad021b05ccfb3632e7c02aee900e0229e9a039569b7661f95536c0f9e",
+  "input_sources": {
+    "final_base_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\final_clustering_features_base_v1.parquet",
+    "final_with_chaos_parquet": "D:\\Projects\\TS_fcst\\artifacts\\features\\final_clustering_features_with_chaos_v1.parquet"
+  },
+  "outputs": {
+    "grid_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\clustering_grid_results_v1.parquet",
+    "top_configs_parquet": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\top_clustering_configs_v1.parquet",
+    "stability_parquet": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\clustering_stability_results_v1.parquet",
+    "assignments_parquet": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\cluster_assignments_v1.parquet",
+    "grid_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_grid_results_v1.csv",
+    "top_configs_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\top_clustering_configs_v1.csv",
+    "stability_csv": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_stability_results_v1.csv",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\clustering_experiments_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\clustering_experiments_v1_20260312T103148Z.log"
+  },
+  "summary": {
+    "n_grid_configurations": 504,
+    "n_top_configurations": 12,
+    "n_assignments": 5016,
+    "stability_ari_mean": 0.7468767374844147,
+    "stability_nmi_mean": 0.7559591859984645
+  }
+}

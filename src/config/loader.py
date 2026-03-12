@@ -246,3 +246,61 @@ def load_feature_consolidation_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_clustering_experiments_config(config_path: str) -> Dict[str, Any]:
+    """Load clustering-experiments config merged with local artifact paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    input_cfg = dict(stage_cfg.get("input", {}))
+    for key, value in list(input_cfg.items()):
+        if not value:
+            continue
+        p = Path(str(value))
+        input_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    if "clustering" not in artifacts_cfg:
+        artifacts_cfg["clustering"] = str((project_root / "artifacts" / "clustering").resolve())
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "clustering_experiments_v1"),
+        "stage": stage_cfg.get("stage", "clustering_experiments"),
+        "input": input_cfg,
+        "feature_sets": stage_cfg.get("feature_sets", ["base", "with_chaos"]),
+        "scalers": stage_cfg.get("scalers", ["identity", "robust", "quantile"]),
+        "spaces": stage_cfg.get("spaces", ["original", "pca"]),
+        "pca_n_components": stage_cfg.get("pca_n_components", [2, 3, 4, 5, 6]),
+        "algorithms": stage_cfg.get("algorithms", ["gmm", "agglomerative"]),
+        "cluster_range": stage_cfg.get("cluster_range", {"k_min": 2, "k_max": 8}),
+        "imputation": stage_cfg.get("imputation", {"strategy": "median"}),
+        "small_cluster_threshold": stage_cfg.get("small_cluster_threshold", {"mode": "relative", "value": 0.05}),
+        "selection": stage_cfg.get("selection", {"top_n_per_algorithm_per_feature_set": 3}),
+        "stability": stage_cfg.get("stability", {"n_bootstrap": 30, "sample_fraction": 0.8, "random_state": 42}),
+        "output": stage_cfg.get("output", {}),
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        },
+    }
+
+    required_root_keys = ["input", "output", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged

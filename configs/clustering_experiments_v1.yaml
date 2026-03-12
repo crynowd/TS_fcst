@@ -1,0 +1,60 @@
+run_name: "clustering_experiments_v1"
+stage: "clustering_experiments"
+
+input:
+  final_base_parquet: "artifacts/features/final_clustering_features_base_v1.parquet"
+  final_with_chaos_parquet: "artifacts/features/final_clustering_features_with_chaos_v1.parquet"
+
+feature_sets:
+  - "base"
+  - "with_chaos"
+
+scalers:
+  - "identity"
+  - "robust"
+  - "quantile"
+
+spaces:
+  - "original"
+  - "pca"
+
+pca_n_components:
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+
+algorithms:
+  - "gmm"
+  - "agglomerative"
+
+cluster_range:
+  k_min: 2
+  k_max: 8
+
+imputation:
+  strategy: "median"
+
+small_cluster_threshold:
+  mode: "relative"
+  value: 0.05
+
+selection:
+  top_n_per_algorithm_per_feature_set: 3
+  max_cluster_ratio: 0.90
+
+stability:
+  n_bootstrap: 30
+  sample_fraction: 0.8
+  random_state: 42
+
+output:
+  grid_results_parquet_name: "clustering_grid_results_v1.parquet"
+  top_configs_parquet_name: "top_clustering_configs_v1.parquet"
+  stability_parquet_name: "clustering_stability_results_v1.parquet"
+  assignments_parquet_name: "cluster_assignments_v1.parquet"
+  excel_name: "clustering_experiments_v1.xlsx"
+  grid_results_csv_name: "clustering_grid_results_v1.csv"
+  top_configs_csv_name: "top_clustering_configs_v1.csv"
+  stability_csv_name: "clustering_stability_results_v1.csv"
