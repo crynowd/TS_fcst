@@ -1,0 +1,31 @@
+run_name: "cluster_profiling_v1"
+stage: "cluster_profiling"
+
+input:
+  grid_results_parquet: "artifacts/clustering/clustering_grid_results_v1.parquet"
+  top_configs_parquet: "artifacts/clustering/top_clustering_configs_v1.parquet"
+  assignments_parquet: "artifacts/clustering/cluster_assignments_v1.parquet"
+  stability_parquet: "artifacts/clustering/clustering_stability_results_v1.parquet"
+  final_base_parquet: "artifacts/features/final_clustering_features_base_v1.parquet"
+  final_with_chaos_parquet: "artifacts/features/final_clustering_features_with_chaos_v1.parquet"
+
+selection:
+  k_min: 2
+  k_max: 8
+  max_cluster_ratio: 0.90
+  min_cluster_size: 5
+  random_state: 42
+  key_features_top_n: 5
+
+visualization:
+  heatmap_cmap: "RdBu_r"
+  dpi: 160
+
+output:
+  selected_configs_csv_name: "selected_configs_v1.csv"
+  cluster_balance_csv_name: "cluster_balance_v1.csv"
+  cluster_profiles_parquet_name: "cluster_profiles_v1.parquet"
+  cluster_profiles_csv_name: "cluster_profiles_v1.csv"
+  cluster_key_features_csv_name: "cluster_key_features_v1.csv"
+  method_comparison_csv_name: "cluster_method_comparison_v1.csv"
+  excel_name: "cluster_profiles_v1.xlsx"

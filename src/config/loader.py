@@ -304,3 +304,55 @@ def load_clustering_experiments_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_cluster_profiling_config(config_path: str) -> Dict[str, Any]:
+    """Load cluster-profiling config merged with local artifact paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    input_cfg = dict(stage_cfg.get("input", {}))
+    for key, value in list(input_cfg.items()):
+        if not value:
+            continue
+        p = Path(str(value))
+        input_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    if "clustering" not in artifacts_cfg:
+        artifacts_cfg["clustering"] = str((project_root / "artifacts" / "clustering").resolve())
+    if "figures" not in artifacts_cfg:
+        artifacts_cfg["figures"] = str((project_root / "artifacts" / "figures").resolve())
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "cluster_profiling_v1"),
+        "stage": stage_cfg.get("stage", "cluster_profiling"),
+        "input": input_cfg,
+        "selection": stage_cfg.get("selection", {}),
+        "visualization": stage_cfg.get("visualization", {}),
+        "output": stage_cfg.get("output", {}),
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        },
+    }
+
+    required_root_keys = ["input", "output", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged
