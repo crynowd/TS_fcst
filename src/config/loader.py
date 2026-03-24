@@ -356,3 +356,94 @@ def load_cluster_profiling_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
+    """Load forecasting benchmark config merged with local paths config."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    if "forecasting" not in artifacts_cfg:
+        artifacts_cfg["forecasting"] = str((project_root / "artifacts" / "forecasting").resolve())
+
+    data_cfg = dict(stage_cfg.get("data", {}))
+    source_path = Path(str(data_cfg.get("source_path", "artifacts/processed/log_returns_v1.parquet")))
+    if not source_path.is_absolute():
+        source_path = (project_root / source_path).resolve()
+    data_cfg["source_path"] = str(source_path)
+
+    output_cfg = dict(stage_cfg.get("outputs", {}))
+    forecasting_dir = Path(artifacts_cfg["forecasting"]).resolve()
+    reports_dir = Path(artifacts_cfg.get("reports", project_root / "artifacts" / "reports")).resolve()
+    output_cfg.setdefault("run_name", "forecasting_benchmark_smoke_v1")
+    output_cfg.setdefault("raw_predictions_path", str((forecasting_dir / "raw_predictions_smoke_v1.parquet").resolve()))
+    output_cfg.setdefault("fold_metrics_path", str((forecasting_dir / "fold_metrics_smoke_v1.parquet").resolve()))
+    output_cfg.setdefault("series_metrics_path", str((forecasting_dir / "series_metrics_smoke_v1.parquet").resolve()))
+    output_cfg.setdefault("task_audit_path", str((forecasting_dir / "task_audit_smoke_v1.parquet").resolve()))
+    output_cfg.setdefault("excel_report_path", str((reports_dir / "forecasting_smoke_summary_v1.xlsx").resolve()))
+    for key in [
+        "raw_predictions_path",
+        "fold_metrics_path",
+        "series_metrics_path",
+        "task_audit_path",
+        "excel_report_path",
+    ]:
+        value = output_cfg.get(key)
+        if not value:
+            continue
+        p = Path(str(value))
+        output_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    merged: Dict[str, Any] = {
+        "stage": stage_cfg.get("stage", "forecasting_benchmark_smoke"),
+        "data": data_cfg,
+        "models": stage_cfg.get("models", {}),
+        "horizons": stage_cfg.get("horizons", [1, 5, 20]),
+        "window_sizes": stage_cfg.get("window_sizes", {"1": 64, "5": 32, "20": 16}),
+        "validation": stage_cfg.get("validation", {"method": "rolling_origin", "n_folds": 3}),
+        "timeouts": stage_cfg.get(
+            "timeouts",
+            {"max_train_seconds_per_task": 60, "max_predict_seconds_per_task": 15},
+        ),
+        "training": stage_cfg.get(
+            "training",
+            {"max_epochs": 20, "early_stopping_patience": 5, "batch_size": 64, "learning_rate": 1e-3},
+        ),
+        "model_overrides": stage_cfg.get("model_overrides", {}),
+        "filters": stage_cfg.get(
+            "filters",
+            {
+                "active_models": [],
+                "horizons": [],
+                "series_ids": [],
+                "resume_failed_only": False,
+            },
+        ),
+        "outputs": output_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_root_keys = ["data", "models", "outputs", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged

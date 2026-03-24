@@ -1,0 +1,98 @@
+﻿stage: forecasting_benchmark_smoke
+
+data:
+  source_path: artifacts/processed/log_returns_v1.parquet
+  dataset_profile: core_balanced
+  max_series: 10
+  series_selection_mode: first_n
+
+models:
+  active:
+    - naive_zero
+    - naive_mean
+    - ridge_lag
+    - esn
+    - chaotic_esn
+    - transient_chaotic_esn
+    - vanilla_mlp
+    - chaotic_mlp
+    - chaotic_logistic_net
+  inactive_but_supported:
+    - lstm_forecast
+    - chaotic_lstm_forecast
+
+horizons:
+  - 1
+  - 5
+  - 20
+
+window_sizes:
+  "1": 64
+  "5": 32
+  "20": 16
+
+validation:
+  method: rolling_origin
+  n_folds: 3
+
+timeouts:
+  max_train_seconds_per_task: 30
+  max_predict_seconds_per_task: 10
+
+training:
+  max_epochs: 10
+  early_stopping_patience: 3
+  batch_size: 128
+  learning_rate: 0.001
+
+model_overrides:
+  ridge_lag:
+    alpha: 1.0
+  esn:
+    n_reservoir: 200
+    spectral_radius: 0.9
+    ridge_alpha: 1.0e-4
+  chaotic_esn:
+    n_reservoir: 200
+    spectral_radius: 1.5
+    ridge_alpha: 1.0e-4
+  transient_chaotic_esn:
+    n_reservoir: 200
+    spectral_radius: 1.5
+    ridge_alpha: 1.0e-4
+    g_start: 1.5
+    g_end: 0.9
+  vanilla_mlp:
+    hidden_size: 64
+  chaotic_mlp:
+    hidden_size: 64
+    r: 3.8
+  chaotic_logistic_net:
+    hidden_size: 64
+    r_min: 2.6
+    r_max: 3.2
+    beta: 0.1
+    train_r: false
+  lstm_forecast:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+  chaotic_lstm_forecast:
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    r: 3.9
+
+filters:
+  active_models: []
+  horizons: []
+  series_ids: []
+  resume_failed_only: false
+
+outputs:
+  run_name: forecasting_benchmark_smoke_v1
+  raw_predictions_path: artifacts/forecasting/raw_predictions_smoke_v1.parquet
+  fold_metrics_path: artifacts/forecasting/fold_metrics_smoke_v1.parquet
+  series_metrics_path: artifacts/forecasting/series_metrics_smoke_v1.parquet
+  task_audit_path: artifacts/forecasting/task_audit_smoke_v1.parquet
+  excel_report_path: artifacts/reports/forecasting_smoke_summary_v1.xlsx
