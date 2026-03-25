@@ -1,0 +1,29 @@
+{
+  "run_id": "forecasting_benchmark_smoke_v1_20260324T192228Z",
+  "stage": "forecasting_benchmark_smoke",
+  "timestamp_start": "2026-03-24T19:22:28.491103+00:00",
+  "timestamp_end": "2026-03-24T20:02:36.146739+00:00",
+  "git_commit": "7f52b12f60101ab24c001d234d9f88c354ce46d7",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\forecasting_benchmark_smoke_v1.yaml",
+  "input_sources": {
+    "log_returns": "D:\\Projects\\TS_fcst\\artifacts\\processed\\log_returns_v1.parquet",
+    "dataset_profile": "core_balanced"
+  },
+  "outputs": {
+    "raw_predictions": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\raw_predictions_smoke_v1.parquet",
+    "fold_metrics": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\fold_metrics_smoke_v1.parquet",
+    "series_metrics": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\series_metrics_smoke_v1.parquet",
+    "task_audit": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\task_audit_smoke_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\forecasting_smoke_summary_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\forecasting_benchmark_smoke_v1_20260324T192228Z.log"
+  },
+  "summary": {
+    "series_count": 50,
+    "model_count": 9,
+    "horizon_count": 3,
+    "task_count": 4050,
+    "success_count": 4050,
+    "timeout_count": 0,
+    "error_count": 0
+  }
+}
