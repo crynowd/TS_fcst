@@ -655,3 +655,73 @@ def load_architecture_tuning_benchmark_config(config_path: str) -> Dict[str, Any
         }
     )
     return merged
+
+
+def load_architecture_tuning_final_shortlist_config(config_path: str) -> Dict[str, Any]:
+    """Load architecture tuning final shortlist config merged with local paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
+    artifacts_cfg.setdefault("logs", str((project_root / "artifacts" / "logs").resolve()))
+    artifacts_cfg.setdefault("manifests", str((project_root / "artifacts" / "manifests").resolve()))
+    artifacts_cfg.setdefault("architecture_tuning", str((project_root / "artifacts" / "architecture_tuning").resolve()))
+
+    def _resolve_path(value: str) -> str:
+        p = Path(str(value))
+        return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    input_families = []
+    for item in stage_cfg.get("input_families", []):
+        row = dict(item)
+        for key in ["candidate_level_csv", "best_candidate_summary_csv", "pair_comparison_csv"]:
+            if row.get(key):
+                row[key] = _resolve_path(str(row[key]))
+        input_families.append(row)
+
+    outputs_cfg = dict(stage_cfg.get("outputs", {}))
+    defaults = {
+        "unified_summary_csv": "artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.csv",
+        "unified_summary_parquet": "artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.parquet",
+        "family_summary_csv": "artifacts/architecture_tuning/final_shortlist/family_summary_v1.csv",
+        "selected_architectures_yaml": "configs/forecasting_selected_architectures_v1.yaml",
+        "excel_report_path": "artifacts/reports/architecture_tuning_final_shortlist_v1.xlsx",
+    }
+    for key, default_value in defaults.items():
+        outputs_cfg.setdefault(key, default_value)
+        outputs_cfg[key] = _resolve_path(str(outputs_cfg[key]))
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "architecture_tuning_final_shortlist_v1"),
+        "stage": stage_cfg.get("stage", "architecture_tuning_final_shortlist"),
+        "shortlist_candidate_ids": stage_cfg.get("shortlist_candidate_ids", []),
+        "shortlist_metadata": stage_cfg.get("shortlist_metadata", {}),
+        "input_families": input_families,
+        "outputs": outputs_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_root_keys = ["input_families", "outputs", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged

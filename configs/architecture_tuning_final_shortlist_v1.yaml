@@ -1,0 +1,83 @@
+stage: architecture_tuning_final_shortlist
+run_name: architecture_tuning_final_shortlist_v1
+
+shortlist_candidate_ids:
+  - esn_g004
+  - chaotic_esn_g003
+  - transient_chaotic_esn_g002
+  - vanilla_mlp_g004
+  - chaotic_mlp_g003
+  - logistic_g006
+  - lstm_g001
+  - chaotic_lstm_g003
+
+shortlist_metadata:
+  esn_g004:
+    family: esn
+    model_name: esn
+    selection_role: practical_main
+    rationale: "Лучший нехаотический ESN по среднему MAE между горизонтами при устойчивом времени обучения."
+  chaotic_esn_g003:
+    family: esn
+    model_name: chaotic_esn
+    selection_role: chaotic_counterpart
+    rationale: "Хаотический ESN из парного сравнения; сохраняет исследовательскую ценность на нелинейных сериях при умеренном runtime."
+  transient_chaotic_esn_g002:
+    family: esn
+    model_name: transient_chaotic_esn
+    selection_role: exploratory_chaotic
+    rationale: "Транзиентный хаотический ESN оставлен как exploratory-вариант для проверки gain-schedule гипотезы."
+  vanilla_mlp_g004:
+    family: mlp
+    model_name: vanilla_mlp
+    selection_role: practical_main
+    rationale: "Лучший practical MLP-кандидат по агрегированным ошибкам с минимальным runtime в семействе."
+  chaotic_mlp_g003:
+    family: mlp
+    model_name: chaotic_mlp
+    selection_role: chaotic_counterpart
+    rationale: "Хаотический MLP сохраняется как парный контркандидат для проверки выигрыша на подмножествах рядов."
+  logistic_g006:
+    family: logistic
+    model_name: chaotic_logistic_net
+    selection_role: nonlinear_specialist
+    rationale: "Лучший logistic reservoir-кандидат; специализирован на выраженной нелинейной динамике при приемлемом времени."
+  lstm_g001:
+    family: lstm
+    model_name: lstm_forecast
+    selection_role: practical_main
+    rationale: "Практический LSTM baseline с лучшим балансом точности и скорости в LSTM family."
+  chaotic_lstm_g003:
+    family: lstm
+    model_name: chaotic_lstm_forecast
+    selection_role: chaotic_counterpart
+    rationale: "Хаотический LSTM сохранен как counterpart для проверки эффекта хаотической инициализации."
+
+input_families:
+  - family: esn
+    source_run_name: architecture_tuning_esn_v1
+    candidate_level_csv: artifacts/architecture_tuning/esn_v1/candidate_level_results_esn_v1.csv
+    best_candidate_summary_csv: artifacts/architecture_tuning/esn_v1/best_candidate_summary_esn_v1.csv
+    pair_comparison_csv: artifacts/architecture_tuning/esn_v1/pair_comparison_summary_esn_v1.csv
+  - family: mlp
+    source_run_name: architecture_tuning_mlp_v1
+    candidate_level_csv: artifacts/architecture_tuning/mlp_v1/candidate_level_results_mlp_v1.csv
+    best_candidate_summary_csv: artifacts/architecture_tuning/mlp_v1/best_candidate_summary_mlp_v1.csv
+    pair_comparison_csv: artifacts/architecture_tuning/mlp_v1/pair_comparison_summary_mlp_v1.csv
+  - family: logistic
+    source_run_name: architecture_tuning_logistic_v1
+    candidate_level_csv: artifacts/architecture_tuning/logistic_v1/candidate_level_results_logistic_v1.csv
+    best_candidate_summary_csv: artifacts/architecture_tuning/logistic_v1/best_candidate_summary_logistic_v1.csv
+    pair_comparison_csv: artifacts/architecture_tuning/logistic_v1/pair_comparison_summary_logistic_v1.csv
+  - family: lstm
+    source_run_name: architecture_tuning_lstm_v1
+    candidate_level_csv: artifacts/architecture_tuning/lstm_v1/candidate_level_results_lstm_v1.csv
+    best_candidate_summary_csv: artifacts/architecture_tuning/lstm_v1/best_candidate_summary_lstm_v1.csv
+    pair_comparison_csv: artifacts/architecture_tuning/lstm_v1/pair_comparison_summary_lstm_v1.csv
+
+outputs:
+  unified_summary_csv: artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.csv
+  unified_summary_parquet: artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.parquet
+  family_summary_csv: artifacts/architecture_tuning/final_shortlist/family_summary_v1.csv
+  selected_architectures_yaml: configs/forecasting_selected_architectures_v1.yaml
+  excel_report_path: artifacts/reports/architecture_tuning_final_shortlist_v1.xlsx

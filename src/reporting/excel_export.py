@@ -670,3 +670,23 @@ def export_architecture_tuning_benchmark_excel(
             best_candidate_summary_df.to_excel(writer, sheet_name="best_candidate_summary", index=False)
         readme_df.to_excel(writer, sheet_name="readme", index=False)
     return out_path
+
+
+def export_architecture_tuning_final_shortlist_excel(
+    excel_path: str | Path,
+    summary_df: pd.DataFrame,
+    final_shortlist_df: pd.DataFrame,
+    family_summary_df: pd.DataFrame,
+    parameter_snapshot_df: pd.DataFrame,
+    readme_df: pd.DataFrame,
+) -> Path:
+    """Export final architecture tuning shortlist report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        final_shortlist_df.to_excel(writer, sheet_name="final_shortlist", index=False)
+        family_summary_df.to_excel(writer, sheet_name="family_summary", index=False)
+        parameter_snapshot_df.to_excel(writer, sheet_name="parameter_snapshot", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+    return out_path

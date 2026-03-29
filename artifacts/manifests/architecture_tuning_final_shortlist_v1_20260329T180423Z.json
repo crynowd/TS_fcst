@@ -1,0 +1,40 @@
+{
+  "run_id": "architecture_tuning_final_shortlist_v1_20260329T180423Z",
+  "stage": "architecture_tuning_final_shortlist",
+  "timestamp_start": "2026-03-29T18:04:23.604878+00:00",
+  "timestamp_end": "2026-03-29T18:04:23.946295+00:00",
+  "git_commit": "6035833fda4c0820c22d20366546194e74f79374",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\architecture_tuning_final_shortlist_v1.yaml",
+  "input_sources": [
+    "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\candidate_level_results_esn_v1.csv",
+    "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\mlp_v1\\candidate_level_results_mlp_v1.csv",
+    "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\logistic_v1\\candidate_level_results_logistic_v1.csv",
+    "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\candidate_level_results_lstm_v1.csv"
+  ],
+  "outputs": {
+    "unified_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\final_shortlist\\unified_tuning_summary_v1.csv",
+    "unified_summary_parquet": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\final_shortlist\\unified_tuning_summary_v1.parquet",
+    "family_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\final_shortlist\\family_summary_v1.csv",
+    "selected_architectures_yaml": "D:\\Projects\\TS_fcst\\configs\\forecasting_selected_architectures_v1.yaml",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\architecture_tuning_final_shortlist_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\architecture_tuning_final_shortlist_v1_20260329T180423Z.log"
+  },
+  "summary": {
+    "number_of_families": 4,
+    "number_of_shortlisted_models": 8,
+    "number_of_practical_models": 3,
+    "number_of_chaotic_models": 3,
+    "number_of_exploratory_models": 2,
+    "shortlist_candidate_ids": [
+      "esn_g004",
+      "chaotic_esn_g003",
+      "transient_chaotic_esn_g002",
+      "vanilla_mlp_g004",
+      "chaotic_mlp_g003",
+      "logistic_g006",
+      "lstm_g001",
+      "chaotic_lstm_g003"
+    ],
+    "missing_candidate_ids": []
+  }
+}

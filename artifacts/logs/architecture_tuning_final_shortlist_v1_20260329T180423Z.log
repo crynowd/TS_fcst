@@ -1,0 +1,16 @@
+2026-03-29 21:04:23 | INFO | Architecture tuning final shortlist config loaded: D:\Projects\TS_fcst\configs\architecture_tuning_final_shortlist_v1.yaml
+2026-03-29 21:04:23 | INFO | reading_family_artifacts family=esn source_run=architecture_tuning_esn_v1 dir=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1
+2026-03-29 21:04:23 | INFO | reading_family_artifacts family=mlp source_run=architecture_tuning_mlp_v1 dir=D:\Projects\TS_fcst\artifacts\architecture_tuning\mlp_v1
+2026-03-29 21:04:23 | INFO | reading_family_artifacts family=logistic source_run=architecture_tuning_logistic_v1 dir=D:\Projects\TS_fcst\artifacts\architecture_tuning\logistic_v1
+2026-03-29 21:04:23 | INFO | reading_family_artifacts family=lstm source_run=architecture_tuning_lstm_v1 dir=D:\Projects\TS_fcst\artifacts\architecture_tuning\lstm_v1
+2026-03-29 21:04:23 | INFO | shortlist_candidates_found=['esn_g004', 'chaotic_esn_g003', 'transient_chaotic_esn_g002', 'vanilla_mlp_g004', 'chaotic_mlp_g003', 'logistic_g006', 'lstm_g001', 'chaotic_lstm_g003']
+2026-03-29 21:04:23 | INFO | artifact_dirs_read=['D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1', 'D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\logistic_v1', 'D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1', 'D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\mlp_v1']
+2026-03-29 21:04:23 | INFO | shortlist_found=['esn_g004', 'chaotic_esn_g003', 'transient_chaotic_esn_g002', 'vanilla_mlp_g004', 'chaotic_mlp_g003', 'logistic_g006', 'lstm_g001', 'chaotic_lstm_g003']
+2026-03-29 21:04:23 | INFO | shortlist_missing=[]
+2026-03-29 21:04:23 | INFO | saved_unified_csv=D:\Projects\TS_fcst\artifacts\architecture_tuning\final_shortlist\unified_tuning_summary_v1.csv
+2026-03-29 21:04:23 | INFO | saved_unified_parquet=D:\Projects\TS_fcst\artifacts\architecture_tuning\final_shortlist\unified_tuning_summary_v1.parquet
+2026-03-29 21:04:23 | INFO | saved_family_summary_csv=D:\Projects\TS_fcst\artifacts\architecture_tuning\final_shortlist\family_summary_v1.csv
+2026-03-29 21:04:23 | INFO | saved_selected_architectures_yaml=D:\Projects\TS_fcst\configs\forecasting_selected_architectures_v1.yaml
+2026-03-29 21:04:23 | INFO | saved_excel_report=D:\Projects\TS_fcst\artifacts\reports\architecture_tuning_final_shortlist_v1.xlsx
+2026-03-29 21:04:23 | INFO | saved_manifest=D:\Projects\TS_fcst\artifacts\manifests\architecture_tuning_final_shortlist_v1_20260329T180423Z.json
+2026-03-29 21:04:23 | INFO | final_shortlist_count=8

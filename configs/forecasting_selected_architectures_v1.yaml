@@ -1,0 +1,122 @@
+stage: forecasting_selected_architectures
+version: v1
+generated_by_run_id: architecture_tuning_final_shortlist_v1_20260329T180423Z
+generated_at_utc: '2026-03-29T18:04:23.716280+00:00'
+selected_models:
+- candidate_id: esn_g004
+  model_name: esn
+  family: esn
+  source_run_name: architecture_tuning_esn_v1
+  compare_group_id: esn_grp_004
+  model_params:
+    input_scale: 0.12
+    leak_rate: 0.9
+    n_reservoir: 160
+    ridge_alpha: 0.001
+    seed: 2026
+    spectral_radius: 0.92
+  runtime_params: {}
+  selection_role: practical_main
+  selected_for_main_run: true
+- candidate_id: chaotic_esn_g003
+  model_name: chaotic_esn
+  family: esn
+  source_run_name: architecture_tuning_esn_v1
+  compare_group_id: esn_grp_003
+  model_params:
+    chaotic_spectral_radius: 1.3
+    input_scale: 0.08
+    leak_rate: 0.7
+    n_reservoir: 128
+    ridge_alpha: 0.0005
+    seed: 2026
+    spectral_radius: 0.98
+  runtime_params: {}
+  selection_role: chaotic_counterpart
+  selected_for_main_run: true
+- candidate_id: transient_chaotic_esn_g002
+  model_name: transient_chaotic_esn
+  family: esn
+  source_run_name: architecture_tuning_esn_v1
+  compare_group_id: esn_grp_002
+  model_params:
+    g_end: 0.95
+    g_start: 1.3
+    input_scale: 0.1
+    leak_rate: 0.8
+    n_reservoir: 96
+    ridge_alpha: 0.0001
+    seed: 2026
+    spectral_radius: 0.95
+  runtime_params: {}
+  selection_role: exploratory_chaotic
+  selected_for_main_run: true
+- candidate_id: vanilla_mlp_g004
+  model_name: vanilla_mlp
+  family: mlp
+  source_run_name: architecture_tuning_mlp_v1
+  compare_group_id: mlp_grp_004
+  model_params:
+    hidden_dims:
+    - 128
+    - 64
+    seed: 2026
+  runtime_params: {}
+  selection_role: practical_main
+  selected_for_main_run: true
+- candidate_id: chaotic_mlp_g003
+  model_name: chaotic_mlp
+  family: mlp
+  source_run_name: architecture_tuning_mlp_v1
+  compare_group_id: mlp_grp_003
+  model_params:
+    hidden_dims:
+    - 64
+    - 32
+    seed: 2026
+  runtime_params: {}
+  selection_role: chaotic_counterpart
+  selected_for_main_run: true
+- candidate_id: logistic_g006
+  model_name: chaotic_logistic_net
+  family: logistic
+  source_run_name: architecture_tuning_logistic_v1
+  compare_group_id: logistic_alt64
+  model_params:
+    beta: 0.08
+    hidden_size: 64
+    r_max: 3.8
+    r_min: 3.55
+    seed: 2026
+    train_r: false
+  runtime_params: {}
+  selection_role: nonlinear_specialist
+  selected_for_main_run: true
+- candidate_id: lstm_g001
+  model_name: lstm_forecast
+  family: lstm
+  source_run_name: architecture_tuning_lstm_v1
+  compare_group_id: lstm_grp_001
+  model_params:
+    dropout: 0.0
+    hidden_size: 32
+    num_layers: 1
+    seed: 2026
+  runtime_params: {}
+  selection_role: practical_main
+  selected_for_main_run: true
+- candidate_id: chaotic_lstm_g003
+  model_name: chaotic_lstm_forecast
+  family: lstm
+  source_run_name: architecture_tuning_lstm_v1
+  compare_group_id: lstm_grp_003
+  model_params:
+    dropout: 0.1
+    hidden_size: 64
+    num_layers: 2
+    r: 3.9
+    seed: 2026
+  runtime_params: {}
+  selection_role: chaotic_counterpart
+  selected_for_main_run: true
+missing_candidates: []
