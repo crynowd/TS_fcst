@@ -65,10 +65,10 @@ class TorchRegressorAdapter(ForecastModelAdapter):
         context: FitContext | None = None,
     ) -> None:
         ctx = context or FitContext()
-        self._ensure_model(int(X_train.shape[1]))
+        X_tensor = self._prepare_input(X_train)
+        self._ensure_model(int(X_tensor.shape[-1]))
         assert self.model is not None
 
-        X_tensor = self._prepare_input(X_train)
         y_tensor = torch.from_numpy(y_train.astype(np.float32)).unsqueeze(-1)
         dataset = TensorDataset(X_tensor, y_tensor)
         batch_size = max(1, int(ctx.batch_size))

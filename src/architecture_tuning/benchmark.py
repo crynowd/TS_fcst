@@ -55,6 +55,8 @@ CANDIDATE_LEVEL_COLUMNS = [
     "g_start",
     "g_end",
     "hidden_size",
+    "num_layers",
+    "dropout",
     "train_r",
     "beta",
     "r_min",
@@ -82,6 +84,25 @@ PAIR_COMPARISON_COLUMNS = [
     "run_id",
     "horizon",
     "compare_group_id",
+    "base_model_name",
+    "chaotic_model_name",
+    "secondary_model_name",
+    "base_candidate_id",
+    "chaotic_candidate_id",
+    "secondary_candidate_id",
+    "base_mae_mean",
+    "chaotic_mae_mean",
+    "secondary_mae_mean",
+    "chaotic_delta_mae_vs_base",
+    "secondary_delta_mae_vs_base",
+    "base_runtime_sec_mean",
+    "chaotic_runtime_sec_mean",
+    "secondary_runtime_sec_mean",
+    "chaotic_runtime_delta_sec_vs_base",
+    "secondary_runtime_delta_sec_vs_base",
+    "base_status",
+    "chaotic_status",
+    "secondary_status",
     "esn_candidate_id",
     "chaotic_esn_candidate_id",
     "transient_chaotic_esn_candidate_id",
@@ -196,6 +217,8 @@ def _extract_candidate_core_params(candidate: dict[str, Any]) -> dict[str, Any]:
         "g_start": model_params.get("g_start"),
         "g_end": model_params.get("g_end"),
         "hidden_size": model_params.get("hidden_size"),
+        "num_layers": model_params.get("num_layers"),
+        "dropout": model_params.get("dropout"),
         "train_r": model_params.get("train_r"),
         "beta": model_params.get("beta"),
         "r_min": model_params.get("r_min"),
@@ -327,7 +350,17 @@ def build_pair_comparison_table(candidate_level_df: pd.DataFrame) -> pd.DataFram
     if candidate_level_df.empty or "compare_group_id" not in candidate_level_df.columns:
         return pd.DataFrame(columns=PAIR_COMPARISON_COLUMNS)
 
-    focus_models = {"esn", "chaotic_esn", "transient_chaotic_esn"}
+    model_triplets = [
+        ("esn", "chaotic_esn", "transient_chaotic_esn"),
+        ("vanilla_mlp", "chaotic_mlp", None),
+        ("lstm_forecast", "chaotic_lstm_forecast", None),
+    ]
+    focus_models = {
+        name
+        for triplet in model_triplets
+        for name in triplet
+        if name is not None
+    }
     df = candidate_level_df[candidate_level_df["model_name"].astype(str).isin(focus_models)].copy()
     if df.empty:
         return pd.DataFrame(columns=PAIR_COMPARISON_COLUMNS)
@@ -346,47 +379,115 @@ def build_pair_comparison_table(candidate_level_df: pd.DataFrame) -> pd.DataFram
         df["run_id"] = ""
 
     rows: list[dict[str, Any]] = []
+
+    def _pick_best(sdf: pd.DataFrame, model_name: str) -> dict[str, Any]:
+        mdf = sdf[sdf["model_name"] == model_name].copy()
+        if mdf.empty:
+            return {
+                "candidate_id": "",
+                "mae_mean": np.nan,
+                "runtime_sec_mean": np.nan,
+                "status": "missing",
+            }
+        ranked = mdf.sort_values(["mae_mean", "candidate_id"], ascending=[True, True], kind="stable")
+        best = ranked.iloc[0]
+        return {
+            "candidate_id": str(best["candidate_id"]),
+            "mae_mean": float(best["mae_mean"]) if pd.notna(best["mae_mean"]) else np.nan,
+            "runtime_sec_mean": float(best["runtime_sec_mean"]) if pd.notna(best["runtime_sec_mean"]) else np.nan,
+            "status": str(best.get("status", "")),
+        }
+
     group_keys = ["run_id", "horizon", "compare_group_id"]
     for (run_id, horizon, compare_group_id), sdf in df.groupby(group_keys, sort=True, dropna=False):
-        rec: dict[str, Any] = {
-            "run_id": str(run_id),
-            "horizon": int(horizon),
-            "compare_group_id": str(compare_group_id),
-        }
-        for model_name in ["esn", "chaotic_esn", "transient_chaotic_esn"]:
-            mdf = sdf[sdf["model_name"] == model_name].copy()
-            if mdf.empty:
-                rec[f"{model_name}_candidate_id"] = ""
-                rec[f"{model_name}_mae_mean"] = np.nan
-                rec[f"{model_name}_runtime_sec_mean"] = np.nan
-                rec[f"{model_name}_status"] = "missing"
+        model_set = set(sdf["model_name"].astype(str).tolist())
+        for base_model, chaotic_model, secondary_model in model_triplets:
+            if base_model not in model_set or chaotic_model not in model_set:
                 continue
-            ranked = mdf.sort_values(["mae_mean", "candidate_id"], ascending=[True, True], kind="stable")
-            best = ranked.iloc[0]
-            rec[f"{model_name}_candidate_id"] = str(best["candidate_id"])
-            rec[f"{model_name}_mae_mean"] = float(best["mae_mean"]) if pd.notna(best["mae_mean"]) else np.nan
-            rec[f"{model_name}_runtime_sec_mean"] = (
-                float(best["runtime_sec_mean"]) if pd.notna(best["runtime_sec_mean"]) else np.nan
-            )
-            rec[f"{model_name}_status"] = str(best.get("status", ""))
 
-        esn_mae = rec.get("esn_mae_mean", np.nan)
-        chaotic_mae = rec.get("chaotic_esn_mae_mean", np.nan)
-        transient_mae = rec.get("transient_chaotic_esn_mae_mean", np.nan)
-        esn_runtime = rec.get("esn_runtime_sec_mean", np.nan)
-        chaotic_runtime = rec.get("chaotic_esn_runtime_sec_mean", np.nan)
-        transient_runtime = rec.get("transient_chaotic_esn_runtime_sec_mean", np.nan)
-        rec["chaotic_esn_delta_mae_vs_esn"] = chaotic_mae - esn_mae if pd.notna(chaotic_mae) and pd.notna(esn_mae) else np.nan
-        rec["transient_chaotic_esn_delta_mae_vs_esn"] = (
-            transient_mae - esn_mae if pd.notna(transient_mae) and pd.notna(esn_mae) else np.nan
-        )
-        rec["chaotic_esn_runtime_delta_sec_vs_esn"] = (
-            chaotic_runtime - esn_runtime if pd.notna(chaotic_runtime) and pd.notna(esn_runtime) else np.nan
-        )
-        rec["transient_chaotic_esn_runtime_delta_sec_vs_esn"] = (
-            transient_runtime - esn_runtime if pd.notna(transient_runtime) and pd.notna(esn_runtime) else np.nan
-        )
-        rows.append(rec)
+            base = _pick_best(sdf, base_model)
+            chaotic = _pick_best(sdf, chaotic_model)
+            secondary = _pick_best(sdf, secondary_model) if secondary_model is not None else {
+                "candidate_id": "",
+                "mae_mean": np.nan,
+                "runtime_sec_mean": np.nan,
+                "status": "missing",
+            }
+
+            rec: dict[str, Any] = {
+                "run_id": str(run_id),
+                "horizon": int(horizon),
+                "compare_group_id": str(compare_group_id),
+                "base_model_name": base_model,
+                "chaotic_model_name": chaotic_model,
+                "secondary_model_name": secondary_model or "",
+                "base_candidate_id": base["candidate_id"],
+                "chaotic_candidate_id": chaotic["candidate_id"],
+                "secondary_candidate_id": secondary["candidate_id"],
+                "base_mae_mean": base["mae_mean"],
+                "chaotic_mae_mean": chaotic["mae_mean"],
+                "secondary_mae_mean": secondary["mae_mean"],
+                "chaotic_delta_mae_vs_base": (
+                    chaotic["mae_mean"] - base["mae_mean"]
+                    if pd.notna(chaotic["mae_mean"]) and pd.notna(base["mae_mean"])
+                    else np.nan
+                ),
+                "secondary_delta_mae_vs_base": (
+                    secondary["mae_mean"] - base["mae_mean"]
+                    if pd.notna(secondary["mae_mean"]) and pd.notna(base["mae_mean"])
+                    else np.nan
+                ),
+                "base_runtime_sec_mean": base["runtime_sec_mean"],
+                "chaotic_runtime_sec_mean": chaotic["runtime_sec_mean"],
+                "secondary_runtime_sec_mean": secondary["runtime_sec_mean"],
+                "chaotic_runtime_delta_sec_vs_base": (
+                    chaotic["runtime_sec_mean"] - base["runtime_sec_mean"]
+                    if pd.notna(chaotic["runtime_sec_mean"]) and pd.notna(base["runtime_sec_mean"])
+                    else np.nan
+                ),
+                "secondary_runtime_delta_sec_vs_base": (
+                    secondary["runtime_sec_mean"] - base["runtime_sec_mean"]
+                    if pd.notna(secondary["runtime_sec_mean"]) and pd.notna(base["runtime_sec_mean"])
+                    else np.nan
+                ),
+                "base_status": base["status"],
+                "chaotic_status": chaotic["status"],
+                "secondary_status": secondary["status"],
+                "esn_candidate_id": "",
+                "chaotic_esn_candidate_id": "",
+                "transient_chaotic_esn_candidate_id": "",
+                "esn_mae_mean": np.nan,
+                "chaotic_esn_mae_mean": np.nan,
+                "transient_chaotic_esn_mae_mean": np.nan,
+                "chaotic_esn_delta_mae_vs_esn": np.nan,
+                "transient_chaotic_esn_delta_mae_vs_esn": np.nan,
+                "esn_runtime_sec_mean": np.nan,
+                "chaotic_esn_runtime_sec_mean": np.nan,
+                "transient_chaotic_esn_runtime_sec_mean": np.nan,
+                "chaotic_esn_runtime_delta_sec_vs_esn": np.nan,
+                "transient_chaotic_esn_runtime_delta_sec_vs_esn": np.nan,
+                "esn_status": "missing",
+                "chaotic_esn_status": "missing",
+                "transient_chaotic_esn_status": "missing",
+            }
+            if base_model == "esn" and chaotic_model == "chaotic_esn":
+                rec["esn_candidate_id"] = base["candidate_id"]
+                rec["chaotic_esn_candidate_id"] = chaotic["candidate_id"]
+                rec["transient_chaotic_esn_candidate_id"] = secondary["candidate_id"]
+                rec["esn_mae_mean"] = base["mae_mean"]
+                rec["chaotic_esn_mae_mean"] = chaotic["mae_mean"]
+                rec["transient_chaotic_esn_mae_mean"] = secondary["mae_mean"]
+                rec["chaotic_esn_delta_mae_vs_esn"] = rec["chaotic_delta_mae_vs_base"]
+                rec["transient_chaotic_esn_delta_mae_vs_esn"] = rec["secondary_delta_mae_vs_base"]
+                rec["esn_runtime_sec_mean"] = base["runtime_sec_mean"]
+                rec["chaotic_esn_runtime_sec_mean"] = chaotic["runtime_sec_mean"]
+                rec["transient_chaotic_esn_runtime_sec_mean"] = secondary["runtime_sec_mean"]
+                rec["chaotic_esn_runtime_delta_sec_vs_esn"] = rec["chaotic_runtime_delta_sec_vs_base"]
+                rec["transient_chaotic_esn_runtime_delta_sec_vs_esn"] = rec["secondary_runtime_delta_sec_vs_base"]
+                rec["esn_status"] = base["status"]
+                rec["chaotic_esn_status"] = chaotic["status"]
+                rec["transient_chaotic_esn_status"] = secondary["status"]
+            rows.append(rec)
 
     out = pd.DataFrame(rows)
     return _ensure_columns(out, PAIR_COMPARISON_COLUMNS)

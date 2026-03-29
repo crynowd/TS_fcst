@@ -23,6 +23,7 @@ from src.architecture_tuning.dataset import (
     sample_external_series,
     selected_series_to_frame,
 )
+from src.forecasting.architectures.lstm import LSTMForecast, LSTMForecastChaotic
 from src.forecasting.architectures.mlp import ChaoticMLP, VanillaMLP
 
 
@@ -79,6 +80,8 @@ def test_candidate_results_schema() -> None:
         "candidate_id",
         "compare_group_id",
         "hidden_size",
+        "num_layers",
+        "dropout",
         "train_r",
         "beta",
         "r_min",
@@ -187,6 +190,56 @@ def test_mlp_paired_candidates_identical_except_activation() -> None:
         chaotic = chaotic_by_group[group_id]
         assert dict(vanilla["model_params"]) == dict(chaotic["model_params"])
         assert dict(vanilla["runtime_params"]) == dict(chaotic["runtime_params"])
+
+
+def test_lstm_compare_group_pairing_in_config() -> None:
+    cfg_path = Path("configs/architecture_tuning_lstm_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]
+    lstm_groups = {str(item["compare_group_id"]) for item in candidates["lstm_forecast"]}
+    chaotic_groups = {str(item["compare_group_id"]) for item in candidates["chaotic_lstm_forecast"]}
+    assert lstm_groups == chaotic_groups
+    assert len(lstm_groups) == 4
+
+
+def test_lstm_paired_candidates_match_non_chaotic_params() -> None:
+    cfg_path = Path("configs/architecture_tuning_lstm_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]
+    base_by_group = {str(item["compare_group_id"]): item for item in candidates["lstm_forecast"]}
+    chaotic_by_group = {str(item["compare_group_id"]): item for item in candidates["chaotic_lstm_forecast"]}
+    assert set(base_by_group) == set(chaotic_by_group)
+
+    for group_id in sorted(base_by_group.keys()):
+        base = base_by_group[group_id]
+        chaotic = chaotic_by_group[group_id]
+
+        base_model_params = dict(base["model_params"])
+        chaotic_model_params = dict(chaotic["model_params"])
+        for key in ["hidden_size", "num_layers", "dropout", "seed"]:
+            assert chaotic_model_params.get(key) == base_model_params.get(key), f"{group_id}: key mismatch {key}"
+        assert "r" in chaotic_model_params
+
+        assert dict(base.get("runtime_params", {})) == dict(chaotic.get("runtime_params", {}))
+
+
+def test_lstm_and_chaotic_lstm_architecture_match_except_chaotic_init() -> None:
+    torch.manual_seed(123)
+    base = LSTMForecast(input_size=1, hidden_size=64, num_layers=2, dropout=0.1)
+    torch.manual_seed(123)
+    chaotic = LSTMForecastChaotic(input_size=1, hidden_size=64, num_layers=2, dropout=0.1, r=3.9)
+
+    assert int(base.lstm.input_size) == int(chaotic.lstm.input_size) == 1
+    assert int(base.lstm.hidden_size) == int(chaotic.lstm.hidden_size) == 64
+    assert int(base.lstm.num_layers) == int(chaotic.lstm.num_layers) == 2
+    assert np.isclose(float(base.lstm.dropout), float(chaotic.lstm.dropout))
+    assert int(base.fc.in_features) == int(chaotic.fc.in_features) == 64
+    assert int(base.fc.out_features) == int(chaotic.fc.out_features) == 1
+    assert np.isclose(float(chaotic.r), 3.9)
 
 
 def test_vanilla_and_chaotic_mlp_architecture_match_except_activation() -> None:
@@ -560,6 +613,77 @@ def test_best_candidate_summary_picks_lowest_mae_for_logistic_model() -> None:
     assert summary_df.loc[0, "best_candidate_id"] == "c2"
 
 
+def test_best_candidate_summary_picks_lowest_mae_for_lstm_model() -> None:
+    candidate_level_df = pd.DataFrame(
+        [
+            {
+                "run_id": "run_lstm",
+                "model_name": "lstm_forecast",
+                "candidate_id": "lstm_c1",
+                "compare_group_id": "lstm_grp_001",
+                "horizon": 1,
+                "mae_mean": 0.13,
+                "rmse_mean": 0.20,
+                "mase_mean": 0.98,
+                "directional_accuracy_mean": 0.51,
+                "fit_time_sec_mean": 0.50,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.51,
+                "status": "success",
+            },
+            {
+                "run_id": "run_lstm",
+                "model_name": "lstm_forecast",
+                "candidate_id": "lstm_c2",
+                "compare_group_id": "lstm_grp_002",
+                "horizon": 1,
+                "mae_mean": 0.11,
+                "rmse_mean": 0.19,
+                "mase_mean": 0.90,
+                "directional_accuracy_mean": 0.52,
+                "fit_time_sec_mean": 0.55,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.56,
+                "status": "success",
+            },
+            {
+                "run_id": "run_lstm",
+                "model_name": "lstm_forecast",
+                "candidate_id": "lstm_c1",
+                "compare_group_id": "lstm_grp_001",
+                "horizon": 5,
+                "mae_mean": 0.14,
+                "rmse_mean": 0.21,
+                "mase_mean": 1.02,
+                "directional_accuracy_mean": 0.50,
+                "fit_time_sec_mean": 0.50,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.51,
+                "status": "success",
+            },
+            {
+                "run_id": "run_lstm",
+                "model_name": "lstm_forecast",
+                "candidate_id": "lstm_c2",
+                "compare_group_id": "lstm_grp_002",
+                "horizon": 5,
+                "mae_mean": 0.12,
+                "rmse_mean": 0.20,
+                "mase_mean": 0.95,
+                "directional_accuracy_mean": 0.52,
+                "fit_time_sec_mean": 0.55,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.56,
+                "status": "success",
+            },
+        ]
+    )
+
+    summary_df = build_best_candidate_summary_table(candidate_level_df)
+    assert len(summary_df) == 1
+    assert summary_df.loc[0, "best_candidate_id"] == "lstm_c2"
+
+
 def test_small_e2e_architecture_tuning_benchmark_logistic_family(tmp_path) -> None:
     data_dir = _write_synthetic_external_csvs(tmp_path, n_files=20, n_rows=140)
     cfg = {
@@ -636,3 +760,73 @@ def test_small_e2e_architecture_tuning_benchmark_logistic_family(tmp_path) -> No
     assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
     for column in ["hidden_size", "train_r", "beta", "r_min", "r_max"]:
         assert column in candidate_df.columns
+
+
+def test_small_e2e_architecture_tuning_benchmark_lstm_family(tmp_path) -> None:
+    data_dir = _write_synthetic_external_csvs(tmp_path, n_files=20, n_rows=140)
+    cfg = {
+        "stage": "architecture_tuning_benchmark",
+        "run_name": "architecture_tuning_test_lstm",
+        "external_data_dir": data_dir,
+        "file_pattern": "*.csv",
+        "sample_size": 2,
+        "random_seed": 123,
+        "selected_models": ["lstm_forecast", "chaotic_lstm_forecast"],
+        "candidates": {
+            "lstm_forecast": [
+                {
+                    "candidate_id": "lstm_small",
+                    "compare_group_id": "lstm_grp_smoke",
+                    "model_params": {"hidden_size": 16, "num_layers": 1, "dropout": 0.0, "seed": 42},
+                    "runtime_params": {},
+                }
+            ],
+            "chaotic_lstm_forecast": [
+                {
+                    "candidate_id": "chaotic_lstm_small",
+                    "compare_group_id": "lstm_grp_smoke",
+                    "model_params": {"hidden_size": 16, "num_layers": 1, "dropout": 0.0, "r": 3.9, "seed": 42},
+                    "runtime_params": {},
+                }
+            ],
+        },
+        "horizons": [1],
+        "window_sizes": {"1": 12},
+        "validation": {"method": "rolling_origin", "n_folds": 2},
+        "training": {"max_epochs": 2, "early_stopping_patience": 1, "batch_size": 16, "learning_rate": 1e-3},
+        "timeouts": {"max_train_seconds_per_task": 10, "max_predict_seconds_per_task": 10},
+        "device": "cpu",
+        "data_transforms": {"date_column": "Date", "close_column": "Close", "min_history": 80},
+        "outputs": {
+            "selected_series_csv": str(tmp_path / "selected_series_architecture_tuning_lstm_v1.csv"),
+            "candidate_level_results_parquet": str(tmp_path / "candidate_level_results_lstm_v1.parquet"),
+            "candidate_level_results_csv": str(tmp_path / "candidate_level_results_lstm_v1.csv"),
+            "series_level_results_parquet": str(tmp_path / "series_level_results_lstm_v1.parquet"),
+            "pair_comparison_csv": str(tmp_path / "pair_comparison_summary_lstm_v1.csv"),
+            "best_candidate_summary_csv": str(tmp_path / "best_candidate_summary_lstm_v1.csv"),
+            "excel_report_path": str(tmp_path / "architecture_tuning_benchmark_lstm_v1.xlsx"),
+        },
+        "artifacts": {"manifests": str(tmp_path), "logs": str(tmp_path)},
+        "meta": {
+            "config_path": "synthetic_lstm",
+            "project_root": str(tmp_path),
+            "run_id": "architecture_tuning_test_lstm_run",
+            "log_path": str(tmp_path / "run_lstm.log"),
+        },
+    }
+
+    logger = logging.getLogger("architecture_tuning_lstm_test")
+    logger.handlers = []
+    logger.addHandler(logging.NullHandler())
+
+    result = run_architecture_tuning_benchmark(cfg=cfg, logger=logger)
+    assert result["n_candidates"] == 2
+
+    candidate_df = pd.read_parquet(tmp_path / "candidate_level_results_lstm_v1.parquet")
+    assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
+    for column in ["hidden_size", "num_layers", "dropout", "fit_time", "predict_time"]:
+        assert column in candidate_df.columns
+
+    pair_df = pd.read_csv(tmp_path / "pair_comparison_summary_lstm_v1.csv")
+    assert not pair_df.empty
+    assert {"base_model_name", "chaotic_model_name", "chaotic_delta_mae_vs_base"}.issubset(set(pair_df.columns))

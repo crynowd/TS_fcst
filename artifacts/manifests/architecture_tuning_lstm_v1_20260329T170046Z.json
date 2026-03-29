@@ -1,0 +1,36 @@
+{
+  "run_id": "architecture_tuning_lstm_v1_20260329T170046Z",
+  "stage": "architecture_tuning_benchmark",
+  "timestamp_start": "2026-03-29T17:00:46.108221+00:00",
+  "timestamp_end": "2026-03-29T17:28:01.954929+00:00",
+  "git_commit": "1a7e6452b1278ea7a910f74e605a30dd469a0a48",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\architecture_tuning_lstm_v1.yaml",
+  "input_sources": {
+    "external_data_dir": "D:\\Projects\\Data\\Stocks\\us\\ETFs",
+    "selected_series_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\selected_series_architecture_tuning_lstm_v1.csv"
+  },
+  "outputs": {
+    "selected_series_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\selected_series_architecture_tuning_lstm_v1.csv",
+    "candidate_level_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\candidate_level_results_lstm_v1.parquet",
+    "candidate_level_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\candidate_level_results_lstm_v1.csv",
+    "series_level_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\series_level_results_lstm_v1.parquet",
+    "pair_comparison_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\pair_comparison_summary_lstm_v1.csv",
+    "best_candidate_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\lstm_v1\\best_candidate_summary_lstm_v1.csv",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\architecture_tuning_lstm_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\architecture_tuning_lstm_v1_20260329T170046Z.log"
+  },
+  "summary": {
+    "external_data_dir": "D:\\Projects\\Data\\Stocks\\us\\ETFs",
+    "sample_size": 12,
+    "random_seed": 20260329,
+    "n_available_files": 1344,
+    "n_selected_files": 12,
+    "n_models": 2,
+    "n_candidates": 8,
+    "n_horizons": 3,
+    "success_count": 24,
+    "failure_count": 0,
+    "skipped_series": [],
+    "runtime_sec": 1635.846708
+  }
+}
