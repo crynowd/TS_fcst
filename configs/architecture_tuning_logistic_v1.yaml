@@ -1,0 +1,116 @@
+stage: architecture_tuning_benchmark
+run_name: architecture_tuning_logistic_v1
+
+benchmark:
+  external_data_dir: D:/Projects/Data/Stocks/us/ETFs
+  file_pattern: "*.txt"
+  sample_size: 12
+  random_seed: 20260329
+
+data_transforms:
+  date_column: Date
+  close_column: Close
+  min_history: 240
+
+models:
+  selected_models:
+    - chaotic_logistic_net
+  candidates:
+    chaotic_logistic_net:
+      - candidate_id: logistic_g001
+        compare_group_id: logistic_hs32
+        model_params:
+          hidden_size: 32
+          train_r: false
+          beta: 0.20
+          r_min: 3.65
+          r_max: 3.95
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: logistic_g002
+        compare_group_id: logistic_hs64
+        model_params:
+          hidden_size: 64
+          train_r: false
+          beta: 0.20
+          r_min: 3.65
+          r_max: 3.95
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: logistic_g003
+        compare_group_id: logistic_hs128
+        model_params:
+          hidden_size: 128
+          train_r: false
+          beta: 0.20
+          r_min: 3.65
+          r_max: 3.95
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: logistic_g004
+        compare_group_id: logistic_hs32
+        model_params:
+          hidden_size: 32
+          train_r: true
+          beta: 0.20
+          r_min: 3.65
+          r_max: 3.95
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: logistic_g005
+        compare_group_id: logistic_hs64
+        model_params:
+          hidden_size: 64
+          train_r: true
+          beta: 0.20
+          r_min: 3.65
+          r_max: 3.95
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: logistic_g006
+        compare_group_id: logistic_alt64
+        model_params:
+          hidden_size: 64
+          train_r: false
+          beta: 0.08
+          r_min: 3.55
+          r_max: 3.80
+          seed: 2026
+        runtime_params: {}
+
+horizons:
+  - 1
+  - 5
+  - 20
+
+evaluation:
+  window_sizes:
+    "1": 64
+    "5": 32
+    "20": 16
+  validation:
+    method: rolling_origin
+    n_folds: 3
+  training:
+    max_epochs: 12
+    early_stopping_patience: 6
+    batch_size: 128
+    learning_rate: 0.001
+  timeouts:
+    max_train_seconds_per_task: 30
+    max_predict_seconds_per_task: 10
+
+device: auto
+
+reporting:
+  include_series_preview_rows: 1000
+
+outputs:
+  output_dir: artifacts/architecture_tuning/logistic_v1
+  selected_series_csv: artifacts/architecture_tuning/logistic_v1/selected_series_architecture_tuning_logistic_v1.csv
+  candidate_level_results_parquet: artifacts/architecture_tuning/logistic_v1/candidate_level_results_logistic_v1.parquet
+  candidate_level_results_csv: artifacts/architecture_tuning/logistic_v1/candidate_level_results_logistic_v1.csv
+  series_level_results_parquet: artifacts/architecture_tuning/logistic_v1/series_level_results_logistic_v1.parquet
+  pair_comparison_csv: artifacts/architecture_tuning/logistic_v1/pair_comparison_summary_logistic_v1.csv
+  best_candidate_summary_csv: artifacts/architecture_tuning/logistic_v1/best_candidate_summary_logistic_v1.csv
+  excel_report_path: artifacts/reports/architecture_tuning_logistic_v1.xlsx

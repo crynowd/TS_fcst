@@ -74,7 +74,21 @@ def test_selected_series_schema(tmp_path) -> None:
 def test_candidate_results_schema() -> None:
     df = pd.DataFrame([{c: pd.NA for c in CANDIDATE_LEVEL_COLUMNS}])
     assert df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
-    required = {"model_name", "candidate_id", "compare_group_id", "hidden_dims", "depth", "fit_time", "predict_time", "status"}
+    required = {
+        "model_name",
+        "candidate_id",
+        "compare_group_id",
+        "hidden_size",
+        "train_r",
+        "beta",
+        "r_min",
+        "r_max",
+        "hidden_dims",
+        "depth",
+        "fit_time",
+        "predict_time",
+        "status",
+    }
     assert required.issubset(set(df.columns))
 
 
@@ -416,4 +430,209 @@ def test_small_e2e_architecture_tuning_benchmark_mlp_family(tmp_path) -> None:
     candidate_df = pd.read_parquet(tmp_path / "candidate_level_results_mlp_v1.parquet")
     assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
     for column in ["hidden_dims", "depth", "fit_time", "predict_time"]:
+        assert column in candidate_df.columns
+
+
+def test_logistic_candidate_schema_and_count_in_config() -> None:
+    cfg_path = Path("configs/architecture_tuning_logistic_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    assert cfg["models"]["selected_models"] == ["chaotic_logistic_net"]
+    candidates = cfg["models"]["candidates"]["chaotic_logistic_net"]
+    assert len(candidates) == 6
+
+    required_model_keys = {"hidden_size", "train_r", "beta", "r_min", "r_max"}
+    for item in candidates:
+        assert required_model_keys.issubset(set(item["model_params"].keys()))
+
+
+def test_logistic_compare_group_consistency_in_config() -> None:
+    cfg_path = Path("configs/architecture_tuning_logistic_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]["chaotic_logistic_net"]
+    by_group: dict[str, list[dict]] = {}
+    for item in candidates:
+        group_id = str(item.get("compare_group_id", ""))
+        by_group.setdefault(group_id, []).append(item)
+
+    assert set(by_group.keys()) == {"logistic_hs32", "logistic_hs64", "logistic_hs128", "logistic_alt64"}
+    assert len(by_group["logistic_hs32"]) == 2
+    assert len(by_group["logistic_hs64"]) == 2
+    assert len(by_group["logistic_hs128"]) == 1
+    assert len(by_group["logistic_alt64"]) == 1
+
+    for group_id in ["logistic_hs32", "logistic_hs64"]:
+        train_r_values = {bool(item["model_params"]["train_r"]) for item in by_group[group_id]}
+        assert train_r_values == {False, True}, f"{group_id} must contain fixed-r and train-r candidates"
+
+
+def test_logistic_candidates_vary_only_allowed_params() -> None:
+    cfg_path = Path("configs/architecture_tuning_logistic_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]["chaotic_logistic_net"]
+    allowed_model_keys = {"hidden_size", "train_r", "beta", "r_min", "r_max", "seed"}
+    expected_runtime = {}
+
+    for item in candidates:
+        model_params = dict(item["model_params"])
+        runtime_params = dict(item.get("runtime_params", {}))
+        assert set(model_params.keys()).issubset(allowed_model_keys)
+        assert runtime_params == expected_runtime
+        assert model_params["r_min"] < model_params["r_max"]
+        assert 0.0 < float(model_params["beta"]) <= 1.0
+        assert float(model_params["r_min"]) >= 0.0
+        assert float(model_params["r_max"]) <= 4.0
+
+
+def test_best_candidate_summary_picks_lowest_mae_for_logistic_model() -> None:
+    candidate_level_df = pd.DataFrame(
+        [
+            {
+                "run_id": "run_logistic",
+                "model_name": "chaotic_logistic_net",
+                "candidate_id": "c1",
+                "compare_group_id": "grp",
+                "horizon": 1,
+                "mae_mean": 0.15,
+                "rmse_mean": 0.20,
+                "mase_mean": 1.00,
+                "directional_accuracy_mean": 0.50,
+                "fit_time_sec_mean": 0.2,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.21,
+                "status": "success",
+            },
+            {
+                "run_id": "run_logistic",
+                "model_name": "chaotic_logistic_net",
+                "candidate_id": "c2",
+                "compare_group_id": "grp",
+                "horizon": 5,
+                "mae_mean": 0.10,
+                "rmse_mean": 0.18,
+                "mase_mean": 0.90,
+                "directional_accuracy_mean": 0.51,
+                "fit_time_sec_mean": 0.3,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.31,
+                "status": "success",
+            },
+            {
+                "run_id": "run_logistic",
+                "model_name": "chaotic_logistic_net",
+                "candidate_id": "c1",
+                "compare_group_id": "grp",
+                "horizon": 5,
+                "mae_mean": 0.14,
+                "rmse_mean": 0.19,
+                "mase_mean": 0.98,
+                "directional_accuracy_mean": 0.50,
+                "fit_time_sec_mean": 0.2,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.21,
+                "status": "success",
+            },
+            {
+                "run_id": "run_logistic",
+                "model_name": "chaotic_logistic_net",
+                "candidate_id": "c2",
+                "compare_group_id": "grp",
+                "horizon": 1,
+                "mae_mean": 0.11,
+                "rmse_mean": 0.17,
+                "mase_mean": 0.92,
+                "directional_accuracy_mean": 0.51,
+                "fit_time_sec_mean": 0.3,
+                "predict_time_sec_mean": 0.01,
+                "total_runtime_sec": 0.31,
+                "status": "success",
+            },
+        ]
+    )
+
+    summary_df = build_best_candidate_summary_table(candidate_level_df)
+    assert len(summary_df) == 1
+    assert summary_df.loc[0, "best_candidate_id"] == "c2"
+
+
+def test_small_e2e_architecture_tuning_benchmark_logistic_family(tmp_path) -> None:
+    data_dir = _write_synthetic_external_csvs(tmp_path, n_files=20, n_rows=140)
+    cfg = {
+        "stage": "architecture_tuning_benchmark",
+        "run_name": "architecture_tuning_test_logistic",
+        "external_data_dir": data_dir,
+        "file_pattern": "*.csv",
+        "sample_size": 2,
+        "random_seed": 123,
+        "selected_models": ["chaotic_logistic_net"],
+        "candidates": {
+            "chaotic_logistic_net": [
+                {
+                    "candidate_id": "logistic_small_fixed",
+                    "compare_group_id": "logistic_grp_smoke",
+                    "model_params": {
+                        "hidden_size": 16,
+                        "train_r": False,
+                        "beta": 0.20,
+                        "r_min": 3.60,
+                        "r_max": 3.90,
+                        "seed": 42,
+                    },
+                    "runtime_params": {},
+                },
+                {
+                    "candidate_id": "logistic_small_trainr",
+                    "compare_group_id": "logistic_grp_smoke",
+                    "model_params": {
+                        "hidden_size": 16,
+                        "train_r": True,
+                        "beta": 0.20,
+                        "r_min": 3.60,
+                        "r_max": 3.90,
+                        "seed": 42,
+                    },
+                    "runtime_params": {},
+                },
+            ]
+        },
+        "horizons": [1],
+        "window_sizes": {"1": 12},
+        "validation": {"method": "rolling_origin", "n_folds": 2},
+        "training": {"max_epochs": 2, "early_stopping_patience": 1, "batch_size": 16, "learning_rate": 1e-3},
+        "timeouts": {"max_train_seconds_per_task": 10, "max_predict_seconds_per_task": 10},
+        "device": "cpu",
+        "data_transforms": {"date_column": "Date", "close_column": "Close", "min_history": 80},
+        "outputs": {
+            "selected_series_csv": str(tmp_path / "selected_series_architecture_tuning_logistic_v1.csv"),
+            "candidate_level_results_parquet": str(tmp_path / "candidate_level_results_logistic_v1.parquet"),
+            "candidate_level_results_csv": str(tmp_path / "candidate_level_results_logistic_v1.csv"),
+            "series_level_results_parquet": str(tmp_path / "series_level_results_logistic_v1.parquet"),
+            "pair_comparison_csv": str(tmp_path / "pair_comparison_summary_logistic_v1.csv"),
+            "best_candidate_summary_csv": str(tmp_path / "best_candidate_summary_logistic_v1.csv"),
+            "excel_report_path": str(tmp_path / "architecture_tuning_benchmark_logistic_v1.xlsx"),
+        },
+        "artifacts": {"manifests": str(tmp_path), "logs": str(tmp_path)},
+        "meta": {
+            "config_path": "synthetic_logistic",
+            "project_root": str(tmp_path),
+            "run_id": "architecture_tuning_test_logistic_run",
+            "log_path": str(tmp_path / "run_logistic.log"),
+        },
+    }
+
+    logger = logging.getLogger("architecture_tuning_logistic_test")
+    logger.handlers = []
+    logger.addHandler(logging.NullHandler())
+
+    result = run_architecture_tuning_benchmark(cfg=cfg, logger=logger)
+    assert result["n_candidates"] == 2
+
+    candidate_df = pd.read_parquet(tmp_path / "candidate_level_results_logistic_v1.parquet")
+    assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
+    for column in ["hidden_size", "train_r", "beta", "r_min", "r_max"]:
         assert column in candidate_df.columns
