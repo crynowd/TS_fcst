@@ -54,6 +54,8 @@ CANDIDATE_LEVEL_COLUMNS = [
     "ridge_alpha",
     "g_start",
     "g_end",
+    "hidden_dims",
+    "depth",
     "params_json",
     "params_repr",
     "n_series",
@@ -64,6 +66,8 @@ CANDIDATE_LEVEL_COLUMNS = [
     "directional_accuracy_mean",
     "fit_time_sec_mean",
     "predict_time_sec_mean",
+    "fit_time",
+    "predict_time",
     "total_runtime_sec",
     "status",
     "notes",
@@ -168,6 +172,15 @@ def _candidate_params_repr(candidate: dict[str, Any]) -> tuple[str, str]:
 
 def _extract_candidate_core_params(candidate: dict[str, Any]) -> dict[str, Any]:
     model_params = dict(candidate.get("model_params", {}))
+    hidden_dims = model_params.get("hidden_dims")
+    if hidden_dims is None and "hidden_size" in model_params:
+        hidden_dims = [int(model_params["hidden_size"])]
+    if isinstance(hidden_dims, tuple):
+        hidden_dims = list(hidden_dims)
+    if isinstance(hidden_dims, list):
+        hidden_dims = [int(v) for v in hidden_dims]
+    else:
+        hidden_dims = None
     return {
         "n_reservoir": model_params.get("n_reservoir"),
         "spectral_radius": model_params.get("spectral_radius"),
@@ -177,6 +190,8 @@ def _extract_candidate_core_params(candidate: dict[str, Any]) -> dict[str, Any]:
         "ridge_alpha": model_params.get("ridge_alpha"),
         "g_start": model_params.get("g_start"),
         "g_end": model_params.get("g_end"),
+        "hidden_dims": str(hidden_dims) if hidden_dims is not None else "",
+        "depth": int(len(hidden_dims)) if hidden_dims is not None else pd.NA,
     }
 
 
@@ -691,6 +706,18 @@ def run_architecture_tuning_benchmark(cfg: dict[str, Any], logger: Any) -> dict[
                             else np.nan
                         ),
                         "predict_time_sec_mean": (
+                            float(
+                                pd.to_numeric(horizon_df.loc[success_mask, "predict_time_sec"], errors="coerce").mean()
+                            )
+                            if not horizon_df.empty and success_mask.any()
+                            else np.nan
+                        ),
+                        "fit_time": (
+                            float(pd.to_numeric(horizon_df.loc[success_mask, "fit_time_sec"], errors="coerce").mean())
+                            if not horizon_df.empty and success_mask.any()
+                            else np.nan
+                        ),
+                        "predict_time": (
                             float(
                                 pd.to_numeric(horizon_df.loc[success_mask, "predict_time_sec"], errors="coerce").mean()
                             )

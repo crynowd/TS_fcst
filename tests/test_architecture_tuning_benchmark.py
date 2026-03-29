@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import torch
 import yaml
 
 from src.architecture_tuning.benchmark import (
@@ -22,6 +23,7 @@ from src.architecture_tuning.dataset import (
     sample_external_series,
     selected_series_to_frame,
 )
+from src.forecasting.architectures.mlp import ChaoticMLP, VanillaMLP
 
 
 def _write_synthetic_external_csvs(tmp_path, n_files: int = 30, n_rows: int = 160) -> str:
@@ -72,6 +74,8 @@ def test_selected_series_schema(tmp_path) -> None:
 def test_candidate_results_schema() -> None:
     df = pd.DataFrame([{c: pd.NA for c in CANDIDATE_LEVEL_COLUMNS}])
     assert df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
+    required = {"model_name", "candidate_id", "compare_group_id", "hidden_dims", "depth", "fit_time", "predict_time", "status"}
+    assert required.issubset(set(df.columns))
 
 
 def test_best_by_model_summary() -> None:
@@ -140,6 +144,51 @@ def test_paired_esn_candidates_share_non_chaotic_params() -> None:
             base_params = base_by_group[group_id]
             for key in non_chaotic_keys:
                 assert model_params.get(key) == base_params.get(key), f"{model_name}/{group_id} key mismatch: {key}"
+
+
+def test_mlp_compare_group_pairing_in_config() -> None:
+    cfg_path = Path("configs/architecture_tuning_mlp_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]
+    vanilla_groups = {str(item["compare_group_id"]) for item in candidates["vanilla_mlp"]}
+    chaotic_groups = {str(item["compare_group_id"]) for item in candidates["chaotic_mlp"]}
+    assert vanilla_groups == chaotic_groups
+    assert len(vanilla_groups) == 4
+
+
+def test_mlp_paired_candidates_identical_except_activation() -> None:
+    cfg_path = Path("configs/architecture_tuning_mlp_v1.yaml")
+    with cfg_path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    candidates = cfg["models"]["candidates"]
+    vanilla_by_group = {str(item["compare_group_id"]): item for item in candidates["vanilla_mlp"]}
+    chaotic_by_group = {str(item["compare_group_id"]): item for item in candidates["chaotic_mlp"]}
+    assert set(vanilla_by_group) == set(chaotic_by_group)
+
+    for group_id in sorted(vanilla_by_group.keys()):
+        vanilla = vanilla_by_group[group_id]
+        chaotic = chaotic_by_group[group_id]
+        assert dict(vanilla["model_params"]) == dict(chaotic["model_params"])
+        assert dict(vanilla["runtime_params"]) == dict(chaotic["runtime_params"])
+
+
+def test_vanilla_and_chaotic_mlp_architecture_match_except_activation() -> None:
+    torch.manual_seed(123)
+    vanilla = VanillaMLP(input_size=16, hidden_dims=[64, 32])
+    torch.manual_seed(123)
+    chaotic = ChaoticMLP(input_size=16, hidden_dims=[64, 32])
+
+    assert len(vanilla.hidden_layers) == len(chaotic.hidden_layers)
+    vanilla_shapes = [(int(layer.in_features), int(layer.out_features)) for layer in vanilla.hidden_layers]
+    chaotic_shapes = [(int(layer.in_features), int(layer.out_features)) for layer in chaotic.hidden_layers]
+    assert vanilla_shapes == chaotic_shapes == [(16, 64), (64, 32)]
+    assert int(vanilla.output_layer.in_features) == int(chaotic.output_layer.in_features) == 32
+    assert int(vanilla.output_layer.out_features) == int(chaotic.output_layer.out_features) == 1
+    assert vanilla.act.__class__.__name__ == "ReLU"
+    assert hasattr(chaotic, "r")
 
 
 def test_candidate_level_summary_schemas() -> None:
@@ -302,3 +351,69 @@ def test_small_e2e_architecture_tuning_benchmark_esn_family(tmp_path) -> None:
 
     candidate_df = pd.read_parquet(tmp_path / "candidate_level_results_v1.parquet")
     assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
+
+
+def test_small_e2e_architecture_tuning_benchmark_mlp_family(tmp_path) -> None:
+    data_dir = _write_synthetic_external_csvs(tmp_path, n_files=20, n_rows=140)
+    cfg = {
+        "stage": "architecture_tuning_benchmark",
+        "run_name": "architecture_tuning_test_mlp",
+        "external_data_dir": data_dir,
+        "file_pattern": "*.csv",
+        "sample_size": 2,
+        "random_seed": 123,
+        "selected_models": ["vanilla_mlp", "chaotic_mlp"],
+        "candidates": {
+            "vanilla_mlp": [
+                {
+                    "candidate_id": "vanilla_mlp_small",
+                    "compare_group_id": "mlp_grp_smoke",
+                    "model_params": {"hidden_dims": [16], "seed": 42},
+                    "runtime_params": {},
+                }
+            ],
+            "chaotic_mlp": [
+                {
+                    "candidate_id": "chaotic_mlp_small",
+                    "compare_group_id": "mlp_grp_smoke",
+                    "model_params": {"hidden_dims": [16], "seed": 42},
+                    "runtime_params": {},
+                }
+            ],
+        },
+        "horizons": [1],
+        "window_sizes": {"1": 12},
+        "validation": {"method": "rolling_origin", "n_folds": 2},
+        "training": {"max_epochs": 2, "early_stopping_patience": 1, "batch_size": 16, "learning_rate": 1e-3},
+        "timeouts": {"max_train_seconds_per_task": 10, "max_predict_seconds_per_task": 10},
+        "device": "cpu",
+        "data_transforms": {"date_column": "Date", "close_column": "Close", "min_history": 80},
+        "outputs": {
+            "selected_series_csv": str(tmp_path / "selected_series_architecture_tuning_mlp_v1.csv"),
+            "candidate_level_results_parquet": str(tmp_path / "candidate_level_results_mlp_v1.parquet"),
+            "candidate_level_results_csv": str(tmp_path / "candidate_level_results_mlp_v1.csv"),
+            "series_level_results_parquet": str(tmp_path / "series_level_results_mlp_v1.parquet"),
+            "pair_comparison_csv": str(tmp_path / "pair_comparison_summary_mlp_v1.csv"),
+            "best_candidate_summary_csv": str(tmp_path / "best_candidate_summary_mlp_v1.csv"),
+            "excel_report_path": str(tmp_path / "architecture_tuning_benchmark_mlp_v1.xlsx"),
+        },
+        "artifacts": {"manifests": str(tmp_path), "logs": str(tmp_path)},
+        "meta": {
+            "config_path": "synthetic_mlp",
+            "project_root": str(tmp_path),
+            "run_id": "architecture_tuning_test_mlp_run",
+            "log_path": str(tmp_path / "run_mlp.log"),
+        },
+    }
+
+    logger = logging.getLogger("architecture_tuning_mlp_test")
+    logger.handlers = []
+    logger.addHandler(logging.NullHandler())
+
+    result = run_architecture_tuning_benchmark(cfg=cfg, logger=logger)
+    assert result["n_candidates"] == 2
+
+    candidate_df = pd.read_parquet(tmp_path / "candidate_level_results_mlp_v1.parquet")
+    assert candidate_df.columns.tolist() == CANDIDATE_LEVEL_COLUMNS
+    for column in ["hidden_dims", "depth", "fit_time", "predict_time"]:
+        assert column in candidate_df.columns
