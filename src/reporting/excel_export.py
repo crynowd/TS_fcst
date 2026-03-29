@@ -644,3 +644,29 @@ def export_clustering_experiments_excel(
         stability_df.to_excel(writer, sheet_name="stability", index=False)
         readme_df.to_excel(writer, sheet_name="config_readme", index=False)
     return out_path
+
+
+def export_architecture_tuning_benchmark_excel(
+    excel_path: str | Path,
+    summary_df: pd.DataFrame,
+    selected_series_df: pd.DataFrame,
+    candidate_level_df: pd.DataFrame,
+    best_by_model_df: pd.DataFrame,
+    pair_comparison_df: pd.DataFrame | None,
+    best_candidate_summary_df: pd.DataFrame | None,
+    readme_df: pd.DataFrame,
+) -> Path:
+    """Export compact architecture tuning benchmark report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        selected_series_df.to_excel(writer, sheet_name="selected_series", index=False)
+        candidate_level_df.to_excel(writer, sheet_name="candidate_results", index=False)
+        best_by_model_df.to_excel(writer, sheet_name="best_by_model", index=False)
+        if pair_comparison_df is not None:
+            pair_comparison_df.to_excel(writer, sheet_name="pair_comparison", index=False)
+        if best_candidate_summary_df is not None:
+            best_candidate_summary_df.to_excel(writer, sheet_name="best_candidate_summary", index=False)
+        readme_df.to_excel(writer, sheet_name="readme", index=False)
+    return out_path
