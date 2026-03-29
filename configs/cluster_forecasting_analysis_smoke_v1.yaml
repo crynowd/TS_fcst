@@ -1,0 +1,44 @@
+﻿run_name: cluster_forecasting_analysis_smoke_v1
+stage: cluster_forecasting_analysis_smoke
+
+forecasting_inputs:
+  series_metrics_path: artifacts/forecasting/series_metrics_smoke_v1.parquet
+  fold_metrics_path: artifacts/forecasting/fold_metrics_smoke_v1.parquet
+  raw_predictions_path: artifacts/forecasting/raw_predictions_smoke_v1.parquet
+
+clustering_inputs:
+  cluster_assignments_path: artifacts/clustering/cluster_assignments_v1.parquet
+  selected_configs_path: artifacts/clustering/selected_configs_v1.csv
+
+shortlist_configs:
+  - cfg_0191
+  - cfg_0185
+  - cfg_0193
+  - cfg_0443
+  - cfg_0444
+  - cfg_0445
+
+baselines:
+  primary: naive_zero
+  secondary: naive_mean
+
+metrics_for_comparison:
+  - mae
+  - rmse
+  - mase
+  - directional_accuracy
+
+stat_tests:
+  use_kruskal: true
+  use_pairwise_posthoc: false
+
+outputs:
+  run_name: cluster_forecasting_analysis_smoke_v1
+  cluster_model_performance_path: artifacts/analysis/cluster_model_performance_v1.parquet
+  cluster_model_performance_csv_path: artifacts/analysis/cluster_model_performance_v1.csv
+  best_model_by_cluster_path: artifacts/analysis/best_model_by_cluster_v1.csv
+  clustering_utility_path: artifacts/analysis/clustering_utility_v1.csv
+  cluster_metric_tests_path: artifacts/analysis/cluster_metric_tests_v1.csv
+  tidy_cluster_model_metrics_path: artifacts/analysis/tidy_cluster_model_metrics_v1.parquet
+  tidy_series_cluster_metrics_path: artifacts/analysis/tidy_series_cluster_metrics_v1.parquet
+  excel_report_path: artifacts/reports/cluster_forecasting_analysis_v1.xlsx

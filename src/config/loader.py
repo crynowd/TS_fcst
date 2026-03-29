@@ -447,3 +447,81 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_cluster_forecasting_analysis_config(config_path: str) -> Dict[str, Any]:
+    """Load cluster-conditioned forecasting analysis config merged with local paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
+    artifacts_cfg.setdefault("logs", str((project_root / "artifacts" / "logs").resolve()))
+    artifacts_cfg.setdefault("manifests", str((project_root / "artifacts" / "manifests").resolve()))
+    artifacts_cfg.setdefault("analysis", str((project_root / "artifacts" / "analysis").resolve()))
+
+    def _resolve_path(value: str) -> str:
+        p = Path(str(value))
+        return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    forecasting_inputs = dict(stage_cfg.get("forecasting_inputs", {}))
+    clustering_inputs = dict(stage_cfg.get("clustering_inputs", {}))
+    for key, value in list(forecasting_inputs.items()):
+        if value:
+            forecasting_inputs[key] = _resolve_path(value)
+    for key, value in list(clustering_inputs.items()):
+        if value:
+            clustering_inputs[key] = _resolve_path(value)
+
+    output_cfg = dict(stage_cfg.get("outputs", {}))
+    run_name = str(output_cfg.get("run_name", "cluster_forecasting_analysis_smoke_v1"))
+    analysis_dir = Path(artifacts_cfg["analysis"]).resolve()
+    reports_dir = Path(artifacts_cfg["reports"]).resolve()
+    output_cfg.setdefault("cluster_model_performance_path", str((analysis_dir / "cluster_model_performance_v1.parquet").resolve()))
+    output_cfg.setdefault("cluster_model_performance_csv_path", str((analysis_dir / "cluster_model_performance_v1.csv").resolve()))
+    output_cfg.setdefault("best_model_by_cluster_path", str((analysis_dir / "best_model_by_cluster_v1.csv").resolve()))
+    output_cfg.setdefault("clustering_utility_path", str((analysis_dir / "clustering_utility_v1.csv").resolve()))
+    output_cfg.setdefault("cluster_metric_tests_path", str((analysis_dir / "cluster_metric_tests_v1.csv").resolve()))
+    output_cfg.setdefault("tidy_cluster_model_metrics_path", str((analysis_dir / "tidy_cluster_model_metrics_v1.parquet").resolve()))
+    output_cfg.setdefault("tidy_series_cluster_metrics_path", str((analysis_dir / "tidy_series_cluster_metrics_v1.parquet").resolve()))
+    output_cfg.setdefault("excel_report_path", str((reports_dir / "cluster_forecasting_analysis_v1.xlsx").resolve()))
+    for key, value in list(output_cfg.items()):
+        if key.endswith("_path") and value:
+            output_cfg[key] = _resolve_path(str(value))
+
+    merged: Dict[str, Any] = {
+        "run_name": run_name,
+        "stage": stage_cfg.get("stage", "cluster_forecasting_analysis_smoke"),
+        "forecasting_inputs": forecasting_inputs,
+        "clustering_inputs": clustering_inputs,
+        "shortlist_configs": stage_cfg.get("shortlist_configs", []),
+        "baselines": stage_cfg.get("baselines", {"primary": "naive_zero", "secondary": "naive_mean"}),
+        "metrics_for_comparison": stage_cfg.get("metrics_for_comparison", ["mae", "rmse", "mase", "directional_accuracy"]),
+        "stat_tests": stage_cfg.get("stat_tests", {"use_kruskal": True, "use_pairwise_posthoc": False}),
+        "outputs": output_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_root_keys = ["forecasting_inputs", "clustering_inputs", "shortlist_configs", "outputs", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged
