@@ -61,7 +61,7 @@ filters:
   active_models: []
   horizons: []
   series_ids: []
-  resume_failed_only: false
+  resume_failed_only: true
 
 outputs:
   run_name: forecasting_benchmark_smoke_v1

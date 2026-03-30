@@ -1,0 +1,42 @@
+{
+  "run_id": "cluster_forecasting_analysis_smoke_v1_20260330T195126Z",
+  "stage": "cluster_forecasting_analysis_smoke",
+  "timestamp_start": "2026-03-30T19:51:26.193452+00:00",
+  "timestamp_end": "2026-03-30T19:51:30.932152+00:00",
+  "git_commit": "10efd7a92e31e9bf86d96d2b533b972cfee86a53",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\cluster_forecasting_analysis_smoke_v1.yaml",
+  "input_sources": {
+    "series_metrics": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\series_metrics_smoke_v1.parquet",
+    "fold_metrics": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\fold_metrics_smoke_v1.parquet",
+    "raw_predictions": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\raw_predictions_smoke_v1.parquet",
+    "cluster_assignments": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\cluster_assignments_v1.parquet",
+    "selected_configs": "D:\\Projects\\TS_fcst\\artifacts\\clustering\\selected_configs_v1.csv"
+  },
+  "outputs": {
+    "cluster_model_performance_parquet": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\cluster_model_performance_v1.parquet",
+    "cluster_model_performance_csv": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\cluster_model_performance_v1.csv",
+    "best_model_by_cluster_csv": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\best_model_by_cluster_v1.csv",
+    "clustering_utility_csv": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\clustering_utility_v1.csv",
+    "cluster_metric_tests_csv": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\cluster_metric_tests_v1.csv",
+    "tidy_cluster_model_metrics_parquet": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\tidy_cluster_model_metrics_v1.parquet",
+    "tidy_series_cluster_metrics_parquet": "D:\\Projects\\TS_fcst\\artifacts\\analysis\\tidy_series_cluster_metrics_v1.parquet",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\cluster_forecasting_analysis_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\cluster_forecasting_analysis_smoke_v1_20260330T195126Z.log"
+  },
+  "summary": {
+    "shortlisted_configs_requested": 4,
+    "shortlisted_configs_used": 3,
+    "missing_in_selected": [
+      "cfg_0192"
+    ],
+    "missing_in_assignments": [
+      "cfg_0192"
+    ],
+    "joined_rows_series_metrics": 9900,
+    "models": 11,
+    "horizons": 3,
+    "baseline_missing_rows": 0,
+    "statistical_tests": 396,
+    "tables_generated": 7
+  }
+}

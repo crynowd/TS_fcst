@@ -11,12 +11,11 @@ clustering_inputs:
   selected_configs_path: artifacts/clustering/selected_configs_v1.csv
 
 shortlist_configs:
-  - cfg_0191
-  - cfg_0185
-  - cfg_0193
   - cfg_0443
-  - cfg_0444
+  - cfg_0185
   - cfg_0445
+  - cfg_0192
+
 
 baselines:
   primary: naive_zero

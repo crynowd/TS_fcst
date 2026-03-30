@@ -434,9 +434,11 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
     ]
 
     if not fold_df.empty:
+        fit_seconds_numeric = pd.to_numeric(fold_df["fit_seconds"], errors="coerce")
         med_runtime = (
-            fold_df.groupby("model_name", dropna=False)["fit_seconds"]
-            .median(numeric_only=True)
+            fold_df.assign(_fit_seconds_numeric=fit_seconds_numeric)
+            .groupby("model_name", dropna=False)["_fit_seconds_numeric"]
+            .median()
             .sort_index()
             .to_dict()
         )

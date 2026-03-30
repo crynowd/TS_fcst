@@ -124,8 +124,13 @@ def export_forecasting_summary_excel(
     with pd.ExcelWriter(out) as writer:
         summary_df.to_excel(writer, sheet_name="summary", index=False)
         model_registry_df.to_excel(writer, sheet_name="model_registry", index=False)
-        task_audit_df.head(500).to_excel(writer, sheet_name="task_audit_preview", index=False)
-        fold_metrics_df.head(1000).to_excel(writer, sheet_name="fold_metrics_preview", index=False)
-        series_metrics_df.head(1000).to_excel(writer, sheet_name="series_metrics_preview", index=False)
+        # Keep legacy sheet names for compatibility, but export full tables.
+        task_audit_df.to_excel(writer, sheet_name="task_audit_preview", index=False)
+        fold_metrics_df.to_excel(writer, sheet_name="fold_metrics_preview", index=False)
+        series_metrics_df.to_excel(writer, sheet_name="series_metrics_preview", index=False)
+        # Explicit full-detail sheets.
+        task_audit_df.to_excel(writer, sheet_name="task_audit_full", index=False)
+        fold_metrics_df.to_excel(writer, sheet_name="fold_metrics_full", index=False)
+        series_metrics_df.to_excel(writer, sheet_name="series_metrics_full", index=False)
         readme_df.to_excel(writer, sheet_name="readme", index=False)
     return out
