@@ -50,6 +50,18 @@ class ChaoticESNAdapter(_BaseESNAdapter):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(name="chaotic_esn", model=ChaoticESN(**kwargs))
 
+    def get_model_config(self) -> dict[str, Any]:
+        cfg = super().get_model_config()
+        cfg.update(
+            {
+                "base_spectral_radius": float(getattr(self.model, "base_spectral_radius", self.model.spectral_radius)),
+                "chaotic_spectral_radius": float(
+                    getattr(self.model, "chaotic_spectral_radius", self.model.spectral_radius)
+                ),
+            }
+        )
+        return cfg
+
 
 class TransientChaoticESNAdapter(_BaseESNAdapter):
     def __init__(self, **kwargs: Any) -> None:

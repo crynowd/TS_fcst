@@ -96,6 +96,28 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
 
     active_models, horizons, filter_series_ids = _resolve_execution_filters(cfg)
     inactive_supported = list(cfg.get("models", {}).get("inactive_but_supported", []))
+    selected_arch_meta = dict(cfg.get("meta", {}).get("selected_architectures", {}))
+    selected_model_metadata = dict(selected_arch_meta.get("model_metadata", {}))
+
+    if selected_arch_meta.get("applied"):
+        logger.info(
+            "selected_architectures source=%s requested=%s resolved=%s",
+            selected_arch_meta.get("source_config_path", ""),
+            selected_arch_meta.get("requested_candidate_ids", []),
+            selected_arch_meta.get("resolved_candidate_ids", []),
+        )
+        missing_candidate_ids = selected_arch_meta.get("missing_candidate_ids", [])
+        if missing_candidate_ids:
+            logger.warning("selected_architectures missing_candidate_ids=%s", missing_candidate_ids)
+        mapping_rows = []
+        for model_name in active_models:
+            row = selected_model_metadata.get(model_name, {})
+            if row:
+                mapping_rows.append(
+                    f"{model_name}->{row.get('candidate_id', '')}:{row.get('selection_role', '')}"
+                )
+        if mapping_rows:
+            logger.info("selected_architectures model_mapping=%s", ", ".join(mapping_rows))
 
     selected = select_series(
         log_returns_df=log_returns,
@@ -393,7 +415,11 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
     }
     out_paths = save_tables(raw_df=raw_df, fold_df=fold_df, series_df=series_df, audit_df=audit_df, outputs=outputs)
 
-    model_registry_rows = build_model_registry_table(active_models=active_models, inactive_models=inactive_supported)
+    model_registry_rows = build_model_registry_table(
+        active_models=active_models,
+        inactive_models=inactive_supported,
+        model_metadata=selected_model_metadata,
+    )
     model_registry_df = pd.DataFrame(model_registry_rows)
 
     summary_rows = [

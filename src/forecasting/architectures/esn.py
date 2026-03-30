@@ -28,6 +28,8 @@ class ESN:
         W_raw = rng.rand(n_reservoir, n_reservoir).astype(np.float64) - 0.5
         eigvals = np.linalg.eigvals(W_raw)
         sr = np.max(np.abs(eigvals))
+        if not np.isfinite(sr) or sr == 0.0:
+            raise ValueError("Failed to initialize ESN reservoir: invalid spectral radius norm")
         self.W = (W_raw * (spectral_radius / sr)).astype(np.float64)
         self.W_out = None
 
@@ -70,22 +72,27 @@ class ESN:
 
 
 class ChaoticESN(ESN):
-    """Same ESN but with spectral radius > 1 to push reservoir toward chaos."""
+    """ESN with optional chaotic spectral radius override for pairwise comparisons."""
 
     def __init__(
         self,
         n_inputs: int = 1,
         n_reservoir: int = 500,
-        spectral_radius: float = 1.5,
+        spectral_radius: float = 0.9,
+        chaotic_spectral_radius: float | None = 1.5,
         input_scale: float = 0.1,
         leak_rate: float = 1.0,
         ridge_alpha: float = 1e-4,
         seed: int = 43,
     ) -> None:
+        self.base_spectral_radius = float(spectral_radius)
+        self.chaotic_spectral_radius = (
+            float(chaotic_spectral_radius) if chaotic_spectral_radius is not None else float(spectral_radius)
+        )
         super().__init__(
             n_inputs=n_inputs,
             n_reservoir=n_reservoir,
-            spectral_radius=spectral_radius,
+            spectral_radius=self.chaotic_spectral_radius,
             input_scale=input_scale,
             leak_rate=leak_rate,
             ridge_alpha=ridge_alpha,

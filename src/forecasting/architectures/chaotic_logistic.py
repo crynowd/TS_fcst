@@ -18,11 +18,22 @@ class ChaoticLogisticNet(nn.Module):
         train_r: bool = False,
     ) -> None:
         super().__init__()
-        self.window_size = window_size
-        self.hidden_size = hidden_size
-        self.r_min = r_min
-        self.r_max = r_max
-        self.beta = beta
+        if int(window_size) <= 0:
+            raise ValueError("window_size must be positive")
+        if int(hidden_size) <= 0:
+            raise ValueError("hidden_size must be positive")
+        if float(r_min) >= float(r_max):
+            raise ValueError("r_min must be smaller than r_max")
+        if float(r_min) < 0.0 or float(r_max) > 4.0:
+            raise ValueError("r_min/r_max must be within [0, 4] for logistic dynamics")
+        if float(beta) <= 0.0 or float(beta) > 1.0:
+            raise ValueError("beta must be in (0, 1]")
+
+        self.window_size = int(window_size)
+        self.hidden_size = int(hidden_size)
+        self.r_min = float(r_min)
+        self.r_max = float(r_max)
+        self.beta = float(beta)
         self.train_r = train_r
 
         self.r_layer = nn.Linear(1, hidden_size)
@@ -38,10 +49,12 @@ class ChaoticLogisticNet(nn.Module):
                 p.requires_grad = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.ndim != 2:
+            raise ValueError(f"Expected input shape (batch, window_size), got {tuple(x.shape)}")
+        if x.shape[1] != self.window_size:
+            raise ValueError(f"Expected window_size={self.window_size}, got {x.shape[1]}")
         batch_size = x.shape[0]
-        h0 = torch.full(
-            (batch_size, self.hidden_size), 0.5, dtype=torch.float32, device=x.device
-        )
+        h0 = torch.full((batch_size, self.hidden_size), 0.5, dtype=x.dtype, device=x.device)
         if not self.train_r:
             with torch.no_grad():
                 h = self._forward_states(x, h0)

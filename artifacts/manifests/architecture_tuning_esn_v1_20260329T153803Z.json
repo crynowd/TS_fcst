@@ -1,0 +1,36 @@
+{
+  "run_id": "architecture_tuning_esn_v1_20260329T153803Z",
+  "stage": "architecture_tuning_benchmark",
+  "timestamp_start": "2026-03-29T15:38:03.850524+00:00",
+  "timestamp_end": "2026-03-29T15:50:08.681030+00:00",
+  "git_commit": "bc729c129334e9b553960842eb4d089d5da831f9",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\architecture_tuning_esn_v1.yaml",
+  "input_sources": {
+    "external_data_dir": "D:\\Projects\\Data\\Stocks\\us\\ETFs",
+    "selected_series_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\selected_series_architecture_tuning_esn_v1.csv"
+  },
+  "outputs": {
+    "selected_series_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\selected_series_architecture_tuning_esn_v1.csv",
+    "candidate_level_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\candidate_level_results_esn_v1.parquet",
+    "candidate_level_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\candidate_level_results_esn_v1.csv",
+    "series_level_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\series_level_results_esn_v1.parquet",
+    "pair_comparison_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\pair_comparison_summary_esn_v1.csv",
+    "best_candidate_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\architecture_tuning\\esn_v1\\best_candidate_summary_esn_v1.csv",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\architecture_tuning_esn_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\architecture_tuning_esn_v1_20260329T153803Z.log"
+  },
+  "summary": {
+    "external_data_dir": "D:\\Projects\\Data\\Stocks\\us\\ETFs",
+    "sample_size": 12,
+    "random_seed": 20260329,
+    "n_available_files": 1344,
+    "n_selected_files": 12,
+    "n_models": 3,
+    "n_candidates": 12,
+    "n_horizons": 3,
+    "success_count": 36,
+    "failure_count": 0,
+    "skipped_series": [],
+    "runtime_sec": 724.830506
+  }
+}

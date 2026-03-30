@@ -1,0 +1,145 @@
+stage: architecture_tuning_benchmark
+run_name: architecture_tuning_benchmark_v1
+
+benchmark:
+  external_data_dir: D:/Projects/Data/Stocks/us/ETFs
+  file_pattern: "*.csv"
+  sample_size: 25
+  random_seed: 20260329
+
+data_transforms:
+  date_column: Date
+  close_column: Close
+  min_history: 220
+
+models:
+  selected_models:
+    - esn
+    - chaotic_esn
+    - transient_chaotic_esn
+    - vanilla_mlp
+    - chaotic_mlp
+    - chaotic_logistic_net
+    - lstm_forecast
+    - chaotic_lstm_forecast
+  candidates:
+    esn:
+      - candidate_id: esn_base_001
+        compare_group_id: esn_pair_64
+        model_params:
+          n_reservoir: 64
+          spectral_radius: 0.9
+          input_scale: 0.1
+          leak_rate: 1.0
+          ridge_alpha: 1.0e-4
+          seed: 42
+        runtime_params: {}
+    chaotic_esn:
+      - candidate_id: chaotic_esn_001
+        compare_group_id: esn_pair_64
+        model_params:
+          n_reservoir: 64
+          spectral_radius: 1.5
+          input_scale: 0.1
+          leak_rate: 1.0
+          ridge_alpha: 1.0e-4
+          seed: 43
+        runtime_params: {}
+    transient_chaotic_esn:
+      - candidate_id: transient_chaotic_esn_001
+        compare_group_id: esn_pair_64
+        model_params:
+          n_reservoir: 64
+          spectral_radius: 1.5
+          input_scale: 0.1
+          leak_rate: 1.0
+          ridge_alpha: 1.0e-4
+          g_start: 1.5
+          g_end: 0.9
+          seed: 44
+        runtime_params: {}
+    vanilla_mlp:
+      - candidate_id: vanilla_mlp_001
+        compare_group_id: mlp_pair_h64
+        model_params:
+          hidden_size: 64
+          seed: 42
+        runtime_params:
+          max_epochs: 8
+    chaotic_mlp:
+      - candidate_id: chaotic_mlp_001
+        compare_group_id: mlp_pair_h64
+        model_params:
+          hidden_size: 64
+          r: 3.8
+          seed: 42
+        runtime_params:
+          max_epochs: 8
+    chaotic_logistic_net:
+      - candidate_id: chaotic_logistic_net_001
+        compare_group_id: logistic_net_h64
+        model_params:
+          hidden_size: 64
+          r_min: 2.6
+          r_max: 3.2
+          beta: 0.1
+          train_r: false
+          seed: 42
+        runtime_params:
+          max_epochs: 8
+    lstm_forecast:
+      - candidate_id: lstm_forecast_001
+        compare_group_id: lstm_pair_h64_l2
+        model_params:
+          hidden_size: 64
+          num_layers: 2
+          dropout: 0.2
+          seed: 42
+        runtime_params:
+          max_epochs: 6
+    chaotic_lstm_forecast:
+      - candidate_id: chaotic_lstm_forecast_001
+        compare_group_id: lstm_pair_h64_l2
+        model_params:
+          hidden_size: 64
+          num_layers: 2
+          dropout: 0.2
+          r: 3.9
+          seed: 42
+        runtime_params:
+          max_epochs: 6
+
+horizons:
+  - 1
+  - 5
+  - 20
+
+evaluation:
+  window_sizes:
+    "1": 64
+    "5": 32
+    "20": 16
+  validation:
+    method: rolling_origin
+    n_folds: 3
+  training:
+    max_epochs: 10
+    early_stopping_patience: 3
+    batch_size: 128
+    learning_rate: 0.001
+  timeouts:
+    max_train_seconds_per_task: 30
+    max_predict_seconds_per_task: 10
+
+device: auto
+
+reporting:
+  include_series_preview_rows: 1000
+
+outputs:
+  output_dir: artifacts/architecture_tuning
+  selected_series_csv: artifacts/architecture_tuning/selected_series_architecture_tuning_v1.csv
+  candidate_level_results_parquet: artifacts/architecture_tuning/candidate_level_results_v1.parquet
+  candidate_level_results_csv: artifacts/architecture_tuning/candidate_level_results_v1.csv
+  series_level_results_parquet: artifacts/architecture_tuning/series_level_results_v1.parquet
+  excel_report_path: artifacts/reports/architecture_tuning_benchmark_v1.xlsx

@@ -3,7 +3,7 @@
 data:
   source_path: artifacts/processed/log_returns_v1.parquet
   dataset_profile: core_balanced
-  max_series: 50
+  max_series: 100
   series_selection_mode: first_n
 
 models:
@@ -11,15 +11,23 @@ models:
     - naive_zero
     - naive_mean
     - ridge_lag
-    - esn
-    - chaotic_esn
-    - transient_chaotic_esn
-    - vanilla_mlp
-    - chaotic_mlp
-    - chaotic_logistic_net
-  inactive_but_supported:
-    - lstm_forecast
-    - chaotic_lstm_forecast
+  inactive_but_supported: []
+
+selected_architectures:
+  source_config: configs/forecasting_selected_architectures_v1.yaml
+  baselines_keep:
+    - naive_zero
+    - naive_mean
+    - ridge_lag
+  candidate_ids:
+    - esn_g004
+    - chaotic_esn_g003
+    - transient_chaotic_esn_g002
+    - vanilla_mlp_g004
+    - chaotic_mlp_g003
+    - logistic_g006
+    - lstm_g001
+    - chaotic_lstm_g003
 
 horizons:
   - 1
@@ -33,55 +41,21 @@ window_sizes:
 
 validation:
   method: rolling_origin
-  n_folds: 3
+  n_folds: 1
 
 timeouts:
-  max_train_seconds_per_task: 30
+  max_train_seconds_per_task: 120
   max_predict_seconds_per_task: 10
 
 training:
-  max_epochs: 10
-  early_stopping_patience: 3
+  max_epochs: 2
+  early_stopping_patience: 1
   batch_size: 128
   learning_rate: 0.001
 
 model_overrides:
   ridge_lag:
     alpha: 1.0
-  esn:
-    n_reservoir: 200
-    spectral_radius: 0.9
-    ridge_alpha: 1.0e-4
-  chaotic_esn:
-    n_reservoir: 200
-    spectral_radius: 1.5
-    ridge_alpha: 1.0e-4
-  transient_chaotic_esn:
-    n_reservoir: 200
-    spectral_radius: 1.5
-    ridge_alpha: 1.0e-4
-    g_start: 1.5
-    g_end: 0.9
-  vanilla_mlp:
-    hidden_size: 64
-  chaotic_mlp:
-    hidden_size: 64
-    r: 3.8
-  chaotic_logistic_net:
-    hidden_size: 64
-    r_min: 2.6
-    r_max: 3.2
-    beta: 0.1
-    train_r: false
-  lstm_forecast:
-    hidden_size: 64
-    num_layers: 2
-    dropout: 0.2
-  chaotic_lstm_forecast:
-    hidden_size: 64
-    num_layers: 2
-    dropout: 0.2
-    r: 3.9
 
 filters:
   active_models: []

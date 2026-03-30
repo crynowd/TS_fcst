@@ -149,8 +149,13 @@ def build_model(model_name: str, config: dict[str, Any], logger: Any | None = No
     return specs[model_name].factory(clean_cfg)
 
 
-def build_model_registry_table(active_models: list[str], inactive_models: list[str]) -> list[dict[str, Any]]:
+def build_model_registry_table(
+    active_models: list[str],
+    inactive_models: list[str],
+    model_metadata: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     specs = get_model_specs()
+    metadata = model_metadata or {}
     rows: list[dict[str, Any]] = []
     active = set(active_models)
     inactive = set(inactive_models)
@@ -169,6 +174,8 @@ def build_model_registry_table(active_models: list[str], inactive_models: list[s
                 "run_status": run_status,
                 "smoke_default": spec.smoke_default,
                 "integration": spec.notes,
+                "candidate_id": str(metadata.get(name, {}).get("candidate_id", "")),
+                "selection_role": str(metadata.get(name, {}).get("selection_role", "")),
             }
         )
     return rows

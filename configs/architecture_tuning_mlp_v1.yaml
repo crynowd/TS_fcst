@@ -1,0 +1,107 @@
+stage: architecture_tuning_benchmark
+run_name: architecture_tuning_mlp_v1
+
+benchmark:
+  external_data_dir: D:/Projects/Data/Stocks/us/ETFs
+  file_pattern: "*.txt"
+  sample_size: 12
+  random_seed: 20260329
+
+data_transforms:
+  date_column: Date
+  close_column: Close
+  min_history: 240
+
+models:
+  selected_models:
+    - vanilla_mlp
+    - chaotic_mlp
+  candidates:
+    vanilla_mlp:
+      - candidate_id: vanilla_mlp_g001
+        compare_group_id: mlp_grp_001
+        model_params:
+          hidden_dims: [32]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: vanilla_mlp_g002
+        compare_group_id: mlp_grp_002
+        model_params:
+          hidden_dims: [64]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: vanilla_mlp_g003
+        compare_group_id: mlp_grp_003
+        model_params:
+          hidden_dims: [64, 32]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: vanilla_mlp_g004
+        compare_group_id: mlp_grp_004
+        model_params:
+          hidden_dims: [128, 64]
+          seed: 2026
+        runtime_params: {}
+
+    chaotic_mlp:
+      - candidate_id: chaotic_mlp_g001
+        compare_group_id: mlp_grp_001
+        model_params:
+          hidden_dims: [32]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: chaotic_mlp_g002
+        compare_group_id: mlp_grp_002
+        model_params:
+          hidden_dims: [64]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: chaotic_mlp_g003
+        compare_group_id: mlp_grp_003
+        model_params:
+          hidden_dims: [64, 32]
+          seed: 2026
+        runtime_params: {}
+      - candidate_id: chaotic_mlp_g004
+        compare_group_id: mlp_grp_004
+        model_params:
+          hidden_dims: [128, 64]
+          seed: 2026
+        runtime_params: {}
+
+horizons:
+  - 1
+  - 5
+  - 20
+
+evaluation:
+  window_sizes:
+    "1": 64
+    "5": 32
+    "20": 16
+  validation:
+    method: rolling_origin
+    n_folds: 3
+  training:
+    max_epochs: 12
+    early_stopping_patience: 6
+    batch_size: 128
+    learning_rate: 0.001
+  timeouts:
+    max_train_seconds_per_task: 30
+    max_predict_seconds_per_task: 10
+
+device: auto
+
+reporting:
+  include_series_preview_rows: 1000
+
+outputs:
+  output_dir: artifacts/architecture_tuning/mlp_v1
+  selected_series_csv: artifacts/architecture_tuning/mlp_v1/selected_series_architecture_tuning_mlp_v1.csv
+  candidate_level_results_parquet: artifacts/architecture_tuning/mlp_v1/candidate_level_results_mlp_v1.parquet
+  candidate_level_results_csv: artifacts/architecture_tuning/mlp_v1/candidate_level_results_mlp_v1.csv
+  series_level_results_parquet: artifacts/architecture_tuning/mlp_v1/series_level_results_mlp_v1.parquet
+  pair_comparison_csv: artifacts/architecture_tuning/mlp_v1/pair_comparison_summary_mlp_v1.csv
+  best_candidate_summary_csv: artifacts/architecture_tuning/mlp_v1/best_candidate_summary_mlp_v1.csv
+  excel_report_path: artifacts/reports/architecture_tuning_mlp_v1.xlsx

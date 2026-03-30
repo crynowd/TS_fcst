@@ -1,0 +1,44 @@
+2026-03-29 18:38:03 | INFO | Architecture tuning benchmark config loaded: D:\Projects\TS_fcst\configs\architecture_tuning_esn_v1.yaml
+2026-03-29 18:38:03 | INFO | architecture_tuning_benchmark start run_id=architecture_tuning_esn_v1_20260329T153803Z
+2026-03-29 18:38:03 | INFO | config_path=D:\Projects\TS_fcst\configs\architecture_tuning_esn_v1.yaml
+2026-03-29 18:38:03 | INFO | external_data_dir=D:\Projects\Data\Stocks\us\ETFs
+2026-03-29 18:38:03 | INFO | sample_size=12 random_seed=20260329
+2026-03-29 18:38:04 | INFO | found_csv_files=1344
+2026-03-29 18:38:04 | INFO | selected_files=12
+2026-03-29 18:38:04 | INFO | selected_files_list=afk.us.txt; dwm.us.txt; effe.us.txt; fdis.us.txt; iyg.us.txt; jkf.us.txt; jkh.us.txt; mlpg.us.txt; oil.us.txt; qdyn.us.txt; rth.us.txt; silj.us.txt
+2026-03-29 18:38:04 | INFO | models=esn, chaotic_esn, transient_chaotic_esn
+2026-03-29 18:38:04 | INFO | horizons=1, 5, 20
+2026-03-29 18:38:04 | INFO | candidate_start model=esn candidate_id=esn_g001 compare_group_id=esn_grp_001
+2026-03-29 18:38:49 | INFO | candidate_done model=esn candidate_id=esn_g001 elapsed=45.01s
+2026-03-29 18:38:49 | INFO | candidate_start model=esn candidate_id=esn_g002 compare_group_id=esn_grp_002
+2026-03-29 18:39:40 | INFO | candidate_done model=esn candidate_id=esn_g002 elapsed=50.88s
+2026-03-29 18:39:40 | INFO | candidate_start model=esn candidate_id=esn_g003 compare_group_id=esn_grp_003
+2026-03-29 18:40:40 | INFO | candidate_done model=esn candidate_id=esn_g003 elapsed=60.42s
+2026-03-29 18:40:40 | INFO | candidate_start model=esn candidate_id=esn_g004 compare_group_id=esn_grp_004
+2026-03-29 18:41:51 | INFO | candidate_done model=esn candidate_id=esn_g004 elapsed=70.67s
+2026-03-29 18:41:51 | INFO | candidate_start model=chaotic_esn candidate_id=chaotic_esn_g001 compare_group_id=esn_grp_001
+2026-03-29 18:42:36 | INFO | candidate_done model=chaotic_esn candidate_id=chaotic_esn_g001 elapsed=45.12s
+2026-03-29 18:42:36 | INFO | candidate_start model=chaotic_esn candidate_id=chaotic_esn_g002 compare_group_id=esn_grp_002
+2026-03-29 18:43:26 | INFO | candidate_done model=chaotic_esn candidate_id=chaotic_esn_g002 elapsed=50.48s
+2026-03-29 18:43:26 | INFO | candidate_start model=chaotic_esn candidate_id=chaotic_esn_g003 compare_group_id=esn_grp_003
+2026-03-29 18:44:27 | INFO | candidate_done model=chaotic_esn candidate_id=chaotic_esn_g003 elapsed=60.38s
+2026-03-29 18:44:27 | INFO | candidate_start model=chaotic_esn candidate_id=chaotic_esn_g004 compare_group_id=esn_grp_004
+2026-03-29 18:45:37 | INFO | candidate_done model=chaotic_esn candidate_id=chaotic_esn_g004 elapsed=70.03s
+2026-03-29 18:45:37 | INFO | candidate_start model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g001 compare_group_id=esn_grp_001
+2026-03-29 18:46:33 | INFO | candidate_done model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g001 elapsed=55.70s
+2026-03-29 18:46:33 | INFO | candidate_start model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g002 compare_group_id=esn_grp_002
+2026-03-29 18:47:34 | INFO | candidate_done model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g002 elapsed=61.11s
+2026-03-29 18:47:34 | INFO | candidate_start model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g003 compare_group_id=esn_grp_003
+2026-03-29 18:48:46 | INFO | candidate_done model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g003 elapsed=72.05s
+2026-03-29 18:48:46 | INFO | candidate_start model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g004 compare_group_id=esn_grp_004
+2026-03-29 18:50:08 | INFO | candidate_done model=transient_chaotic_esn candidate_id=transient_chaotic_esn_g004 elapsed=82.13s
+2026-03-29 18:50:08 | INFO | selected_series_path=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\selected_series_architecture_tuning_esn_v1.csv
+2026-03-29 18:50:08 | INFO | candidate_level_results_parquet=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\candidate_level_results_esn_v1.parquet
+2026-03-29 18:50:08 | INFO | candidate_level_results_csv=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\candidate_level_results_esn_v1.csv
+2026-03-29 18:50:08 | INFO | series_level_results_parquet=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\series_level_results_esn_v1.parquet
+2026-03-29 18:50:08 | INFO | pair_comparison_csv=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\pair_comparison_summary_esn_v1.csv
+2026-03-29 18:50:08 | INFO | best_candidate_summary_csv=D:\Projects\TS_fcst\artifacts\architecture_tuning\esn_v1\best_candidate_summary_esn_v1.csv
+2026-03-29 18:50:08 | INFO | excel_report_path=D:\Projects\TS_fcst\artifacts\reports\architecture_tuning_esn_v1.xlsx
+2026-03-29 18:50:08 | INFO | manifest_path=D:\Projects\TS_fcst\artifacts\manifests\architecture_tuning_esn_v1_20260329T153803Z.json
+2026-03-29 18:50:08 | INFO | total_candidates=12 success=36 failed=0
+2026-03-29 18:50:08 | INFO | architecture_tuning_benchmark finished elapsed=724.86s

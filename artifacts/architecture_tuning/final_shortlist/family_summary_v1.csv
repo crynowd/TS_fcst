@@ -1,0 +1,5 @@
+family,best_practical_model,best_chaotic_model,best_exploratory_model,main_takeaway,average_runtime_comment,chaos_takeaway
+esn,esn_g004,chaotic_esn_g003,transient_chaotic_esn_g002,Семейство покрыто shortlist-кандидатами.,Средний runtime shortlisted-кандидатов: 21.00 sec.,Delta MAE (chaotic - practical): 0.0006; хаотические кандидаты сохранены как исследовательский контур.
+mlp,vanilla_mlp_g004,chaotic_mlp_g003,,Семейство покрыто shortlist-кандидатами.,Средний runtime shortlisted-кандидатов: 5.46 sec.,Delta MAE (chaotic - practical): 0.0018; хаотические кандидаты сохранены как исследовательский контур.
+logistic,,,logistic_g006,Семейство покрыто shortlist-кандидатами.,Средний runtime shortlisted-кандидатов: 16.11 sec.,Хаотическая ветка сохранена для targeted-анализа подмножеств рядов.
+lstm,lstm_g001,chaotic_lstm_g003,,Семейство покрыто shortlist-кандидатами.,Средний runtime shortlisted-кандидатов: 50.73 sec.,Delta MAE (chaotic - practical): 0.0002; хаотические кандидаты сохранены как исследовательский контур.

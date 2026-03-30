@@ -42,6 +42,103 @@ def _compute_hash(payload: Dict[str, Any]) -> str:
     return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
 
 
+def _resolve_from_project_root(project_root: Path, value: str | Path) -> Path:
+    p = Path(str(value))
+    return (project_root / p).resolve() if not p.is_absolute() else p.resolve()
+
+
+def _load_selected_architectures_for_forecasting(
+    stage_cfg: Dict[str, Any],
+    project_root: Path,
+) -> Dict[str, Any]:
+    selected_cfg = stage_cfg.get("selected_architectures", {})
+    if not isinstance(selected_cfg, dict) or not selected_cfg:
+        return {
+            "applied": False,
+            "source_config_path": "",
+            "requested_candidate_ids": [],
+            "resolved_candidate_ids": [],
+            "missing_candidate_ids": [],
+            "model_overrides": {},
+            "active_models": [],
+            "model_metadata": {},
+        }
+
+    source_config = str(selected_cfg.get("source_config", "")).strip()
+    if not source_config:
+        raise ConfigError("selected_architectures.source_config must be provided when selected_architectures is set")
+
+    source_path = _resolve_from_project_root(project_root, source_config)
+    selected_payload = _read_yaml(source_path)
+    selected_models = selected_payload.get("selected_models", [])
+    if not isinstance(selected_models, list):
+        raise ConfigError("selected_architectures source YAML must contain list field 'selected_models'")
+
+    by_candidate_id: Dict[str, Dict[str, Any]] = {}
+    for item in selected_models:
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("candidate_id", "")).strip()
+        if cid:
+            by_candidate_id[cid] = item
+
+    requested = [str(x) for x in selected_cfg.get("candidate_ids", []) if str(x).strip()]
+    if not requested:
+        requested = [
+            str(item.get("candidate_id", "")).strip()
+            for item in selected_models
+            if isinstance(item, dict) and bool(item.get("selected_for_main_run", True))
+        ]
+        requested = [cid for cid in requested if cid]
+
+    missing_requested = [cid for cid in requested if cid not in by_candidate_id]
+    missing_from_payload = [str(x) for x in selected_payload.get("missing_candidates", []) if str(x).strip()]
+    missing_candidate_ids = sorted(set(missing_requested + missing_from_payload))
+
+    baselines_keep = [str(x) for x in selected_cfg.get("baselines_keep", []) if str(x).strip()]
+    model_overrides: Dict[str, Dict[str, Any]] = {}
+    model_metadata: Dict[str, Dict[str, Any]] = {}
+    shortlisted_model_names: list[str] = []
+    resolved_candidate_ids: list[str] = []
+
+    for cid in requested:
+        item = by_candidate_id.get(cid)
+        if item is None:
+            continue
+        model_name = str(item.get("model_name", "")).strip()
+        if not model_name:
+            continue
+        model_params = item.get("model_params", {})
+        runtime_params = item.get("runtime_params", {})
+        merged_params: Dict[str, Any] = {}
+        if isinstance(model_params, dict):
+            merged_params.update(model_params)
+        if isinstance(runtime_params, dict):
+            merged_params.update(runtime_params)
+        model_overrides[model_name] = merged_params
+        model_metadata[model_name] = {
+            "candidate_id": cid,
+            "selection_role": str(item.get("selection_role", "")),
+            "family": str(item.get("family", "")),
+            "source_run_name": str(item.get("source_run_name", "")),
+        }
+        shortlisted_model_names.append(model_name)
+        resolved_candidate_ids.append(cid)
+
+    active_models = list(dict.fromkeys(baselines_keep + shortlisted_model_names))
+
+    return {
+        "applied": True,
+        "source_config_path": str(source_path),
+        "requested_candidate_ids": requested,
+        "resolved_candidate_ids": resolved_candidate_ids,
+        "missing_candidate_ids": missing_candidate_ids,
+        "model_overrides": model_overrides,
+        "active_models": active_models,
+        "model_metadata": model_metadata,
+    }
+
+
 def load_inventory_config(config_path: str) -> Dict[str, Any]:
     """Load and merge inventory config with local path config.
 
@@ -399,10 +496,30 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
         p = Path(str(value))
         output_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
 
+    models_cfg = dict(stage_cfg.get("models", {}))
+    active_models_cfg = [str(x) for x in models_cfg.get("active", [])]
+    inactive_models_cfg = [str(x) for x in models_cfg.get("inactive_but_supported", [])]
+
+    model_overrides_cfg = dict(stage_cfg.get("model_overrides", {}))
+    selected_arch = _load_selected_architectures_for_forecasting(stage_cfg=stage_cfg, project_root=project_root)
+    if selected_arch.get("applied"):
+        for model_name, params in selected_arch.get("model_overrides", {}).items():
+            model_overrides_cfg[model_name] = params
+
+        selected_active = [str(x) for x in selected_arch.get("active_models", [])]
+        if selected_active:
+            active_models_cfg = list(dict.fromkeys(selected_active + active_models_cfg))
+
+        selected_model_names = set(selected_arch.get("model_metadata", {}).keys())
+        inactive_models_cfg = [m for m in inactive_models_cfg if m not in selected_model_names]
+
+    models_cfg["active"] = active_models_cfg
+    models_cfg["inactive_but_supported"] = inactive_models_cfg
+
     merged: Dict[str, Any] = {
         "stage": stage_cfg.get("stage", "forecasting_benchmark_smoke"),
         "data": data_cfg,
-        "models": stage_cfg.get("models", {}),
+        "models": models_cfg,
         "horizons": stage_cfg.get("horizons", [1, 5, 20]),
         "window_sizes": stage_cfg.get("window_sizes", {"1": 64, "5": 32, "20": 16}),
         "validation": stage_cfg.get("validation", {"method": "rolling_origin", "n_folds": 3}),
@@ -414,7 +531,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "training",
             {"max_epochs": 20, "early_stopping_patience": 5, "batch_size": 64, "learning_rate": 1e-3},
         ),
-        "model_overrides": stage_cfg.get("model_overrides", {}),
+        "model_overrides": model_overrides_cfg,
         "filters": stage_cfg.get(
             "filters",
             {
@@ -430,6 +547,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "config_path": str(stage_config_path),
             "paths_config_path": str(paths_cfg_path),
             "project_root": str(project_root),
+            "selected_architectures": selected_arch,
         },
     }
 
@@ -512,6 +630,206 @@ def load_cluster_forecasting_analysis_config(config_path: str) -> Dict[str, Any]
     }
 
     required_root_keys = ["forecasting_inputs", "clustering_inputs", "shortlist_configs", "outputs", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged
+
+
+def load_architecture_tuning_benchmark_config(config_path: str) -> Dict[str, Any]:
+    """Load architecture tuning benchmark config merged with local paths config."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
+    artifacts_cfg.setdefault("logs", str((project_root / "artifacts" / "logs").resolve()))
+    artifacts_cfg.setdefault("manifests", str((project_root / "artifacts" / "manifests").resolve()))
+    artifacts_cfg.setdefault("architecture_tuning", str((project_root / "artifacts" / "architecture_tuning").resolve()))
+
+    benchmark_cfg = dict(stage_cfg.get("benchmark", {}))
+    data_transforms_cfg = dict(stage_cfg.get("data_transforms", {}))
+    evaluation_cfg = dict(stage_cfg.get("evaluation", {}))
+    models_cfg = dict(stage_cfg.get("models", {}))
+    reporting_cfg = dict(stage_cfg.get("reporting", {}))
+    outputs_cfg = dict(stage_cfg.get("outputs", {}))
+
+    def _resolve_path(value: str) -> str:
+        p = Path(str(value))
+        return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    external_data_dir = str(benchmark_cfg.get("external_data_dir", ""))
+    if external_data_dir:
+        external_data_dir = _resolve_path(external_data_dir)
+
+    output_dir = str(outputs_cfg.get("output_dir", artifacts_cfg["architecture_tuning"]))
+    output_dir = _resolve_path(output_dir)
+    run_name = str(stage_cfg.get("run_name", "architecture_tuning_benchmark_v1"))
+
+    outputs_cfg.setdefault(
+        "selected_series_csv",
+        str((Path(output_dir) / "selected_series_architecture_tuning_v1.csv").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "candidate_level_results_parquet",
+        str((Path(output_dir) / "candidate_level_results_v1.parquet").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "candidate_level_results_csv",
+        str((Path(output_dir) / "candidate_level_results_v1.csv").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "series_level_results_parquet",
+        str((Path(output_dir) / "series_level_results_v1.parquet").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "pair_comparison_csv",
+        str((Path(output_dir) / "pair_comparison_summary_v1.csv").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "best_candidate_summary_csv",
+        str((Path(output_dir) / "best_candidate_summary_v1.csv").resolve()),
+    )
+    outputs_cfg.setdefault(
+        "excel_report_path",
+        str((Path(artifacts_cfg["reports"]).resolve() / "architecture_tuning_benchmark_v1.xlsx").resolve()),
+    )
+
+    for key, value in list(outputs_cfg.items()):
+        if key.endswith("_path") or key.endswith("_csv") or key.endswith("_parquet") or key == "output_dir":
+            outputs_cfg[key] = _resolve_path(str(value))
+
+    window_sizes_cfg = dict(evaluation_cfg.get("window_sizes", {"1": 64, "5": 32, "20": 16}))
+    normalized_window_sizes = {str(int(k)): int(v) for k, v in window_sizes_cfg.items()}
+
+    merged: Dict[str, Any] = {
+        "run_name": run_name,
+        "stage": stage_cfg.get("stage", "architecture_tuning_benchmark"),
+        "external_data_dir": external_data_dir,
+        "file_pattern": benchmark_cfg.get("file_pattern", "*.csv"),
+        "sample_size": int(benchmark_cfg.get("sample_size", 25)),
+        "random_seed": int(benchmark_cfg.get("random_seed", 42)),
+        "selected_models": [str(m) for m in models_cfg.get("selected_models", [])],
+        "candidates": models_cfg.get("candidates", {}),
+        "horizons": [int(h) for h in stage_cfg.get("horizons", [1, 5, 20])],
+        "data_transforms": {
+            "date_column": data_transforms_cfg.get("date_column", "Date"),
+            "close_column": data_transforms_cfg.get("close_column", "Close"),
+            "min_history": int(data_transforms_cfg.get("min_history", 120)),
+        },
+        "device": stage_cfg.get("device", "cpu"),
+        "validation": evaluation_cfg.get("validation", {"method": "rolling_origin", "n_folds": 3}),
+        "window_sizes": normalized_window_sizes,
+        "training": evaluation_cfg.get(
+            "training",
+            {
+                "max_epochs": 10,
+                "early_stopping_patience": 3,
+                "batch_size": 128,
+                "learning_rate": 1e-3,
+            },
+        ),
+        "timeouts": evaluation_cfg.get(
+            "timeouts",
+            {
+                "max_train_seconds_per_task": 30,
+                "max_predict_seconds_per_task": 10,
+            },
+        ),
+        "reporting": reporting_cfg,
+        "outputs": outputs_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_root_keys = ["external_data_dir", "selected_models", "horizons", "outputs", "artifacts"]
+    missing = [k for k in required_root_keys if not merged.get(k)]
+    if missing:
+        raise ConfigError(f"Missing config sections: {', '.join(missing)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged
+
+
+def load_architecture_tuning_final_shortlist_config(config_path: str) -> Dict[str, Any]:
+    """Load architecture tuning final shortlist config merged with local paths."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
+    artifacts_cfg.setdefault("logs", str((project_root / "artifacts" / "logs").resolve()))
+    artifacts_cfg.setdefault("manifests", str((project_root / "artifacts" / "manifests").resolve()))
+    artifacts_cfg.setdefault("architecture_tuning", str((project_root / "artifacts" / "architecture_tuning").resolve()))
+
+    def _resolve_path(value: str) -> str:
+        p = Path(str(value))
+        return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    input_families = []
+    for item in stage_cfg.get("input_families", []):
+        row = dict(item)
+        for key in ["candidate_level_csv", "best_candidate_summary_csv", "pair_comparison_csv"]:
+            if row.get(key):
+                row[key] = _resolve_path(str(row[key]))
+        input_families.append(row)
+
+    outputs_cfg = dict(stage_cfg.get("outputs", {}))
+    defaults = {
+        "unified_summary_csv": "artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.csv",
+        "unified_summary_parquet": "artifacts/architecture_tuning/final_shortlist/unified_tuning_summary_v1.parquet",
+        "family_summary_csv": "artifacts/architecture_tuning/final_shortlist/family_summary_v1.csv",
+        "selected_architectures_yaml": "configs/forecasting_selected_architectures_v1.yaml",
+        "excel_report_path": "artifacts/reports/architecture_tuning_final_shortlist_v1.xlsx",
+    }
+    for key, default_value in defaults.items():
+        outputs_cfg.setdefault(key, default_value)
+        outputs_cfg[key] = _resolve_path(str(outputs_cfg[key]))
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "architecture_tuning_final_shortlist_v1"),
+        "stage": stage_cfg.get("stage", "architecture_tuning_final_shortlist"),
+        "shortlist_candidate_ids": stage_cfg.get("shortlist_candidate_ids", []),
+        "shortlist_metadata": stage_cfg.get("shortlist_metadata", {}),
+        "input_families": input_families,
+        "outputs": outputs_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_root_keys = ["input_families", "outputs", "artifacts"]
     missing = [k for k in required_root_keys if not merged.get(k)]
     if missing:
         raise ConfigError(f"Missing config sections: {', '.join(missing)}")
