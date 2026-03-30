@@ -1,0 +1,33 @@
+2026-03-29 21:24:21 | INFO | Forecasting benchmark config loaded: D:\Projects\TS_fcst\configs\forecasting_benchmark_smoke_v1.yaml
+2026-03-29 21:24:21 | INFO | selected_architectures source=D:\Projects\TS_fcst\configs\forecasting_selected_architectures_v1.yaml requested=['esn_g004', 'chaotic_esn_g003', 'transient_chaotic_esn_g002', 'vanilla_mlp_g004', 'chaotic_mlp_g003', 'logistic_g006', 'lstm_g001', 'chaotic_lstm_g003'] resolved=['esn_g004', 'chaotic_esn_g003', 'transient_chaotic_esn_g002', 'vanilla_mlp_g004', 'chaotic_mlp_g003', 'logistic_g006', 'lstm_g001', 'chaotic_lstm_g003']
+2026-03-29 21:24:21 | INFO | selected_architectures model_mapping=esn->esn_g004:practical_main, chaotic_esn->chaotic_esn_g003:chaotic_counterpart, transient_chaotic_esn->transient_chaotic_esn_g002:exploratory_chaotic, vanilla_mlp->vanilla_mlp_g004:practical_main, chaotic_mlp->chaotic_mlp_g003:chaotic_counterpart, chaotic_logistic_net->logistic_g006:nonlinear_specialist, lstm_forecast->lstm_g001:practical_main, chaotic_lstm_forecast->chaotic_lstm_g003:chaotic_counterpart
+2026-03-29 21:24:21 | INFO | forecasting_benchmark start run_id=forecasting_benchmark_smoke_v1_20260329T182421Z series=1 models=11 horizons=1 planned_tasks=11
+2026-03-29 21:24:21 | INFO | task_progress 1/11 model=naive_zero series=RU:ABIO horizon=1 fold=1 elapsed=0.0s
+2026-03-29 21:24:21 | INFO | task_result model=naive_zero series=RU:ABIO horizon=1 fold=1 status=success success=1 timeout=0 error=0
+2026-03-29 21:24:21 | INFO | task_progress 2/11 model=naive_mean series=RU:ABIO horizon=1 fold=1 elapsed=0.0s
+2026-03-29 21:24:21 | INFO | task_result model=naive_mean series=RU:ABIO horizon=1 fold=1 status=success success=2 timeout=0 error=0
+2026-03-29 21:24:21 | INFO | task_progress 3/11 model=ridge_lag series=RU:ABIO horizon=1 fold=1 elapsed=0.0s
+2026-03-29 21:24:21 | INFO | task_result model=ridge_lag series=RU:ABIO horizon=1 fold=1 status=success success=3 timeout=0 error=0
+2026-03-29 21:24:21 | INFO | task_progress 4/11 model=esn series=RU:ABIO horizon=1 fold=1 elapsed=0.0s
+2026-03-29 21:24:24 | INFO | task_result model=esn series=RU:ABIO horizon=1 fold=1 status=success success=4 timeout=0 error=0
+2026-03-29 21:24:24 | INFO | task_progress 5/11 model=chaotic_esn series=RU:ABIO horizon=1 fold=1 elapsed=2.9s
+2026-03-29 21:24:27 | INFO | task_result model=chaotic_esn series=RU:ABIO horizon=1 fold=1 status=success success=5 timeout=0 error=0
+2026-03-29 21:24:27 | INFO | task_progress 6/11 model=transient_chaotic_esn series=RU:ABIO horizon=1 fold=1 elapsed=5.3s
+2026-03-29 21:24:29 | INFO | task_result model=transient_chaotic_esn series=RU:ABIO horizon=1 fold=1 status=success success=6 timeout=0 error=0
+2026-03-29 21:24:29 | INFO | task_progress 7/11 model=vanilla_mlp series=RU:ABIO horizon=1 fold=1 elapsed=7.8s
+2026-03-29 21:24:31 | INFO | epoch_progress model=vanilla_mlp epoch=1/2 train_loss=0.002604 val_loss=0.005387 patience_left=1
+2026-03-29 21:24:31 | INFO | task_result model=vanilla_mlp series=RU:ABIO horizon=1 fold=1 status=success success=7 timeout=0 error=0
+2026-03-29 21:24:31 | INFO | task_progress 8/11 model=chaotic_mlp series=RU:ABIO horizon=1 fold=1 elapsed=9.3s
+2026-03-29 21:24:31 | INFO | epoch_progress model=chaotic_mlp epoch=1/2 train_loss=0.028566 val_loss=0.015483 patience_left=1
+2026-03-29 21:24:31 | INFO | task_result model=chaotic_mlp series=RU:ABIO horizon=1 fold=1 status=success success=8 timeout=0 error=0
+2026-03-29 21:24:31 | INFO | task_progress 9/11 model=chaotic_logistic_net series=RU:ABIO horizon=1 fold=1 elapsed=9.3s
+2026-03-29 21:24:31 | INFO | epoch_progress model=chaotic_logistic_net epoch=1/2 train_loss=0.155620 val_loss=0.006589 patience_left=1
+2026-03-29 21:24:31 | INFO | early_stopping model=chaotic_logistic_net epoch=2 best_val_loss=0.006589
+2026-03-29 21:24:31 | INFO | task_result model=chaotic_logistic_net series=RU:ABIO horizon=1 fold=1 status=success success=9 timeout=0 error=0
+2026-03-29 21:24:31 | INFO | task_progress 10/11 model=lstm_forecast series=RU:ABIO horizon=1 fold=1 elapsed=9.6s
+2026-03-29 21:24:31 | INFO | epoch_progress model=lstm_forecast epoch=1/2 train_loss=0.000973 val_loss=0.003902 patience_left=1
+2026-03-29 21:24:31 | INFO | task_result model=lstm_forecast series=RU:ABIO horizon=1 fold=1 status=success success=10 timeout=0 error=0
+2026-03-29 21:24:31 | INFO | task_progress 11/11 model=chaotic_lstm_forecast series=RU:ABIO horizon=1 fold=1 elapsed=9.8s
+2026-03-29 21:24:32 | INFO | epoch_progress model=chaotic_lstm_forecast epoch=1/2 train_loss=0.001002 val_loss=0.003978 patience_left=1
+2026-03-29 21:24:32 | INFO | task_result model=chaotic_lstm_forecast series=RU:ABIO horizon=1 fold=1 status=success success=11 timeout=0 error=0
+2026-03-29 21:24:33 | INFO | forecasting_benchmark finished run_id=forecasting_benchmark_smoke_v1_20260329T182421Z tasks=11 success=11 timeout=0 error=0 elapsed=11.9s

@@ -1,12 +1,15 @@
 ﻿from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
+from src.config.loader import load_forecasting_benchmark_config
 from src.forecasting.io import FOLD_METRICS_COLUMNS, RAW_PREDICTION_COLUMNS, ensure_table_schema
-from src.forecasting.registry import get_model_specs
+from src.forecasting.registry import build_model, get_model_specs
 from src.forecasting.runners import run_forecasting_benchmark
 from src.forecasting.targets import build_direct_horizon_target
 from src.forecasting.windowing import build_rolling_origin_folds, build_supervised_windows
@@ -148,3 +151,56 @@ def test_small_e2e_smoke_benchmark_on_synthetic_dataset(tmp_path) -> None:
     assert (tmp_path / "series.parquet").exists()
     assert (tmp_path / "audit.parquet").exists()
     assert (tmp_path / "report.xlsx").exists()
+
+
+def test_selected_architectures_are_loaded_into_forecasting_pipeline() -> None:
+    cfg = load_forecasting_benchmark_config("configs/forecasting_benchmark_smoke_v1.yaml")
+
+    selected_path = Path("configs/forecasting_selected_architectures_v1.yaml").resolve()
+    payload = yaml.safe_load(selected_path.read_text(encoding="utf-8"))
+    selected_models = payload["selected_models"]
+    expected_model_names = [str(x["model_name"]) for x in selected_models]
+
+    active_models = list(cfg["models"]["active"])
+    for baseline in ["naive_zero", "naive_mean", "ridge_lag"]:
+        assert baseline in active_models
+    for model_name in expected_model_names:
+        assert model_name in active_models
+
+    selected_meta = cfg["meta"]["selected_architectures"]
+    assert selected_meta["applied"] is True
+    assert set(selected_meta["resolved_candidate_ids"]) == set(x["candidate_id"] for x in selected_models)
+    assert selected_meta["missing_candidate_ids"] == []
+
+
+def test_lstm_family_enabled_in_smoke_config() -> None:
+    cfg = load_forecasting_benchmark_config("configs/forecasting_benchmark_smoke_v1.yaml")
+    active_models = set(cfg["models"]["active"])
+    assert "lstm_forecast" in active_models
+    assert "chaotic_lstm_forecast" in active_models
+    assert "lstm_forecast" not in set(cfg["models"]["inactive_but_supported"])
+    assert "chaotic_lstm_forecast" not in set(cfg["models"]["inactive_but_supported"])
+
+
+def test_model_materialization_matches_shortlist() -> None:
+    cfg = load_forecasting_benchmark_config("configs/forecasting_benchmark_smoke_v1.yaml")
+    selected_meta = cfg["meta"]["selected_architectures"]
+    model_metadata = selected_meta["model_metadata"]
+
+    selected_path = Path("configs/forecasting_selected_architectures_v1.yaml").resolve()
+    payload = yaml.safe_load(selected_path.read_text(encoding="utf-8"))
+    by_model = {str(x["model_name"]): x for x in payload["selected_models"]}
+
+    for model_name, row in by_model.items():
+        assert model_name in cfg["model_overrides"]
+        assert model_name in model_metadata
+        assert model_metadata[model_name]["candidate_id"] == row["candidate_id"]
+        assert model_metadata[model_name]["selection_role"] == row["selection_role"]
+
+        merged_expected = {}
+        merged_expected.update(row.get("model_params", {}))
+        merged_expected.update(row.get("runtime_params", {}))
+        assert cfg["model_overrides"][model_name] == merged_expected
+
+        model = build_model(model_name=model_name, config=cfg, logger=None)
+        assert model.get_model_name() == model_name

@@ -42,6 +42,103 @@ def _compute_hash(payload: Dict[str, Any]) -> str:
     return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
 
 
+def _resolve_from_project_root(project_root: Path, value: str | Path) -> Path:
+    p = Path(str(value))
+    return (project_root / p).resolve() if not p.is_absolute() else p.resolve()
+
+
+def _load_selected_architectures_for_forecasting(
+    stage_cfg: Dict[str, Any],
+    project_root: Path,
+) -> Dict[str, Any]:
+    selected_cfg = stage_cfg.get("selected_architectures", {})
+    if not isinstance(selected_cfg, dict) or not selected_cfg:
+        return {
+            "applied": False,
+            "source_config_path": "",
+            "requested_candidate_ids": [],
+            "resolved_candidate_ids": [],
+            "missing_candidate_ids": [],
+            "model_overrides": {},
+            "active_models": [],
+            "model_metadata": {},
+        }
+
+    source_config = str(selected_cfg.get("source_config", "")).strip()
+    if not source_config:
+        raise ConfigError("selected_architectures.source_config must be provided when selected_architectures is set")
+
+    source_path = _resolve_from_project_root(project_root, source_config)
+    selected_payload = _read_yaml(source_path)
+    selected_models = selected_payload.get("selected_models", [])
+    if not isinstance(selected_models, list):
+        raise ConfigError("selected_architectures source YAML must contain list field 'selected_models'")
+
+    by_candidate_id: Dict[str, Dict[str, Any]] = {}
+    for item in selected_models:
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("candidate_id", "")).strip()
+        if cid:
+            by_candidate_id[cid] = item
+
+    requested = [str(x) for x in selected_cfg.get("candidate_ids", []) if str(x).strip()]
+    if not requested:
+        requested = [
+            str(item.get("candidate_id", "")).strip()
+            for item in selected_models
+            if isinstance(item, dict) and bool(item.get("selected_for_main_run", True))
+        ]
+        requested = [cid for cid in requested if cid]
+
+    missing_requested = [cid for cid in requested if cid not in by_candidate_id]
+    missing_from_payload = [str(x) for x in selected_payload.get("missing_candidates", []) if str(x).strip()]
+    missing_candidate_ids = sorted(set(missing_requested + missing_from_payload))
+
+    baselines_keep = [str(x) for x in selected_cfg.get("baselines_keep", []) if str(x).strip()]
+    model_overrides: Dict[str, Dict[str, Any]] = {}
+    model_metadata: Dict[str, Dict[str, Any]] = {}
+    shortlisted_model_names: list[str] = []
+    resolved_candidate_ids: list[str] = []
+
+    for cid in requested:
+        item = by_candidate_id.get(cid)
+        if item is None:
+            continue
+        model_name = str(item.get("model_name", "")).strip()
+        if not model_name:
+            continue
+        model_params = item.get("model_params", {})
+        runtime_params = item.get("runtime_params", {})
+        merged_params: Dict[str, Any] = {}
+        if isinstance(model_params, dict):
+            merged_params.update(model_params)
+        if isinstance(runtime_params, dict):
+            merged_params.update(runtime_params)
+        model_overrides[model_name] = merged_params
+        model_metadata[model_name] = {
+            "candidate_id": cid,
+            "selection_role": str(item.get("selection_role", "")),
+            "family": str(item.get("family", "")),
+            "source_run_name": str(item.get("source_run_name", "")),
+        }
+        shortlisted_model_names.append(model_name)
+        resolved_candidate_ids.append(cid)
+
+    active_models = list(dict.fromkeys(baselines_keep + shortlisted_model_names))
+
+    return {
+        "applied": True,
+        "source_config_path": str(source_path),
+        "requested_candidate_ids": requested,
+        "resolved_candidate_ids": resolved_candidate_ids,
+        "missing_candidate_ids": missing_candidate_ids,
+        "model_overrides": model_overrides,
+        "active_models": active_models,
+        "model_metadata": model_metadata,
+    }
+
+
 def load_inventory_config(config_path: str) -> Dict[str, Any]:
     """Load and merge inventory config with local path config.
 
@@ -399,10 +496,30 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
         p = Path(str(value))
         output_cfg[key] = str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
 
+    models_cfg = dict(stage_cfg.get("models", {}))
+    active_models_cfg = [str(x) for x in models_cfg.get("active", [])]
+    inactive_models_cfg = [str(x) for x in models_cfg.get("inactive_but_supported", [])]
+
+    model_overrides_cfg = dict(stage_cfg.get("model_overrides", {}))
+    selected_arch = _load_selected_architectures_for_forecasting(stage_cfg=stage_cfg, project_root=project_root)
+    if selected_arch.get("applied"):
+        for model_name, params in selected_arch.get("model_overrides", {}).items():
+            model_overrides_cfg[model_name] = params
+
+        selected_active = [str(x) for x in selected_arch.get("active_models", [])]
+        if selected_active:
+            active_models_cfg = list(dict.fromkeys(selected_active + active_models_cfg))
+
+        selected_model_names = set(selected_arch.get("model_metadata", {}).keys())
+        inactive_models_cfg = [m for m in inactive_models_cfg if m not in selected_model_names]
+
+    models_cfg["active"] = active_models_cfg
+    models_cfg["inactive_but_supported"] = inactive_models_cfg
+
     merged: Dict[str, Any] = {
         "stage": stage_cfg.get("stage", "forecasting_benchmark_smoke"),
         "data": data_cfg,
-        "models": stage_cfg.get("models", {}),
+        "models": models_cfg,
         "horizons": stage_cfg.get("horizons", [1, 5, 20]),
         "window_sizes": stage_cfg.get("window_sizes", {"1": 64, "5": 32, "20": 16}),
         "validation": stage_cfg.get("validation", {"method": "rolling_origin", "n_folds": 3}),
@@ -414,7 +531,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "training",
             {"max_epochs": 20, "early_stopping_patience": 5, "batch_size": 64, "learning_rate": 1e-3},
         ),
-        "model_overrides": stage_cfg.get("model_overrides", {}),
+        "model_overrides": model_overrides_cfg,
         "filters": stage_cfg.get(
             "filters",
             {
@@ -430,6 +547,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "config_path": str(stage_config_path),
             "paths_config_path": str(paths_cfg_path),
             "project_root": str(project_root),
+            "selected_architectures": selected_arch,
         },
     }
 
