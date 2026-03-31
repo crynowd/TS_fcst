@@ -707,6 +707,13 @@ def export_meta_modeling_excel(
     repeat_agg_df: pd.DataFrame | None = None,
     feature_list_df: pd.DataFrame | None = None,
     best_single_repeat_df: pd.DataFrame | None = None,
+    comparison_df: pd.DataFrame | None = None,
+    candidates_df: pd.DataFrame | None = None,
+    feature_importance_df: pd.DataFrame | None = None,
+    prediction_examples_df: pd.DataFrame | None = None,
+    classification_probabilities_df: pd.DataFrame | None = None,
+    pruned_feature_list_df: pd.DataFrame | None = None,
+    dropped_correlation_pairs_df: pd.DataFrame | None = None,
 ) -> Path:
     """Export meta-modeling artifacts into a compact multi-sheet Excel report."""
     out_path = Path(excel_path).resolve()
@@ -732,4 +739,18 @@ def export_meta_modeling_excel(
             feature_list_df.to_excel(writer, sheet_name="feature_list", index=False)
         if best_single_repeat_df is not None:
             best_single_repeat_df.to_excel(writer, sheet_name="best_single_repeat", index=False)
+        if comparison_df is not None:
+            comparison_df.to_excel(writer, sheet_name="comparison", index=False)
+        if candidates_df is not None:
+            candidates_df.to_excel(writer, sheet_name="candidates", index=False)
+        if feature_importance_df is not None:
+            feature_importance_df.to_excel(writer, sheet_name="feature_importance", index=False)
+        if prediction_examples_df is not None:
+            prediction_examples_df.to_excel(writer, sheet_name="prediction_examples", index=False)
+        if classification_probabilities_df is not None:
+            classification_probabilities_df.to_excel(writer, sheet_name="class_probabilities", index=False)
+        if pruned_feature_list_df is not None:
+            pruned_feature_list_df.to_excel(writer, sheet_name="pruned_feature_list", index=False)
+        if dropped_correlation_pairs_df is not None:
+            dropped_correlation_pairs_df.to_excel(writer, sheet_name="dropped_corr_pairs", index=False)
     return out_path

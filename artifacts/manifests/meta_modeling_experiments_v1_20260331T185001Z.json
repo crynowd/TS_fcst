@@ -1,0 +1,40 @@
+{
+  "run_id": "meta_modeling_experiments_v1_20260331T185001Z",
+  "stage": "meta_modeling_experiments",
+  "timestamp_start": "2026-03-31T18:50:01.209172+00:00",
+  "timestamp_end": "2026-03-31T18:54:33.176792+00:00",
+  "git_commit": "757075374b3ba08e57ed95163dedea3b1c0db2b1",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\meta_modeling_experiments_v1.yaml",
+  "outputs": {
+    "meta_dataset_summary_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_experiments_v1.csv",
+    "meta_dataset_summary_parquet_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_experiments_v1.parquet",
+    "model_order_mapping_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\model_order_mapping_experiments_v1.csv",
+    "routing_rows_parquet_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_experiments_v1.parquet",
+    "routing_rows_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_experiments_v1.csv",
+    "task_results_parquet_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_experiments_v1.parquet",
+    "task_results_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_experiments_v1.csv",
+    "split_assignments_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\split_assignments_experiments_v1.csv",
+    "repeat_aggregated_results_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\repeat_aggregated_results_experiments_v1.csv",
+    "best_single_baseline_by_repeat_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\best_single_baseline_by_repeat_experiments_v1.csv",
+    "feature_list_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\feature_list_experiments_v1.csv",
+    "pruned_feature_list_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\pruned_feature_list_experiments_v1.csv",
+    "dropped_correlation_pairs_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\dropped_correlation_pairs_experiments_v1.csv",
+    "feature_manifest_json_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\feature_manifest_experiments_v1.json",
+    "comparison_table_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\comparison_table_experiments_v1.csv",
+    "candidate_models_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\candidate_models_experiments_v1.csv",
+    "feature_importance_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\feature_importance_experiments_v1.csv",
+    "prediction_examples_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\prediction_examples_experiments_v1.csv",
+    "classification_probabilities_csv_path": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\classification_probabilities_experiments_v1.csv",
+    "excel_report_path": "D:\\Projects\\TS_fcst\\artifacts\\reports\\meta_modeling_experiments_v1.xlsx"
+  },
+  "methods": [
+    "regression",
+    "classification",
+    "scoring"
+  ],
+  "summary": {
+    "tasks_total": 648,
+    "tasks_success": 580,
+    "tasks_failed": 68
+  }
+}

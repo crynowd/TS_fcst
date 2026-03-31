@@ -1,0 +1,2 @@
+2026-03-31 21:50:01 | INFO | Meta-modeling experiments config loaded: D:\Projects\TS_fcst\configs\meta_modeling_experiments_v1.yaml
+2026-03-31 21:50:02 | INFO | meta-modeling experiments run_id=meta_modeling_experiments_v1_20260331T185001Z methods=['regression', 'classification', 'scoring'] repeats=3

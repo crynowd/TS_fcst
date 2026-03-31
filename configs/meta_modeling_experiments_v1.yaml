@@ -1,0 +1,81 @@
+run_name: meta_modeling_experiments_v1
+stage: meta_modeling_experiments
+
+inputs:
+  features_path: artifacts/features/final_clustering_features_with_chaos_v1.parquet
+  forecasting_series_metrics_path: artifacts/forecasting/series_metrics_smoke_v1.parquet
+  forecasting_manifest_path: artifacts/manifests/forecasting_benchmark_smoke_v1_20260330T083533Z.json
+
+dataset_filter: ""
+join_keys:
+  - series_id
+  - ticker
+
+target_metrics:
+  - rmse
+  - directional_accuracy
+
+metric_columns:
+  rmse: rmse_mean
+  directional_accuracy: directional_accuracy_mean
+
+methods:
+  - regression
+  - classification
+  - scoring
+
+meta_models:
+  - ridge
+  - random_forest
+  - catboost
+
+classification_models:
+  - logistic_regression
+  - random_forest_classifier
+  - catboost_classifier
+
+scoring_models:
+  - ridge
+  - random_forest
+  - catboost
+
+model_overrides:
+  ridge:
+    alpha: 1.0
+  random_forest:
+    n_estimators: 200
+    max_depth: 8
+    n_jobs: -1
+  random_forest_classifier:
+    n_estimators: 200
+    max_depth: 8
+    n_jobs: -1
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+  catboost:
+    iterations: 300
+    depth: 6
+    learning_rate: 0.05
+  catboost_classifier:
+    iterations: 300
+    depth: 6
+    learning_rate: 0.05
+
+feature_pruning:
+  corr_threshold: 0.90
+
+candidate_selection:
+  top_k_values: [4, 6]
+  closeness_tolerance: 0.05
+
+split:
+  test_size: 0.2
+  validation_size: 0.1
+  random_seed: 42
+  n_repeats: 3
+  random_seeds: []
+
+prediction_examples_per_task: 5
+
+outputs: {}

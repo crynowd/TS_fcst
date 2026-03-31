@@ -943,3 +943,110 @@ def load_meta_modeling_config(config_path: str) -> Dict[str, Any]:
         }
     )
     return merged
+
+
+def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
+    """Load experimental meta-modeling config merged with local paths config."""
+    stage_config_path = Path(config_path).resolve()
+    stage_cfg = _read_yaml(stage_config_path)
+
+    paths_cfg_path = stage_config_path.parent / "paths.local.yaml"
+    paths_cfg = _read_yaml(paths_cfg_path)
+    project_root = Path(paths_cfg.get("project_root", stage_config_path.parents[1]))
+
+    artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
+    artifacts_cfg.setdefault("logs", str((project_root / "artifacts" / "logs").resolve()))
+    artifacts_cfg.setdefault("manifests", str((project_root / "artifacts" / "manifests").resolve()))
+    artifacts_cfg.setdefault("meta_modeling", str((project_root / "artifacts" / "meta_modeling").resolve()))
+
+    def _resolve_path(value: str) -> str:
+        p = Path(str(value))
+        return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
+
+    inputs_cfg = dict(stage_cfg.get("inputs", {}))
+    for key, value in list(inputs_cfg.items()):
+        if key.endswith("_path") and value:
+            inputs_cfg[key] = _resolve_path(str(value))
+
+    outputs_cfg = dict(stage_cfg.get("outputs", {}))
+    meta_dir = Path(artifacts_cfg["meta_modeling"]).resolve()
+    reports_dir = Path(artifacts_cfg["reports"]).resolve()
+    defaults = {
+        "meta_dataset_summary_csv_path": meta_dir / "meta_dataset_summary_experiments_v1.csv",
+        "meta_dataset_summary_parquet_path": meta_dir / "meta_dataset_summary_experiments_v1.parquet",
+        "model_order_mapping_csv_path": meta_dir / "model_order_mapping_experiments_v1.csv",
+        "routing_rows_parquet_path": meta_dir / "routing_rows_experiments_v1.parquet",
+        "routing_rows_csv_path": meta_dir / "routing_rows_experiments_v1.csv",
+        "task_results_parquet_path": meta_dir / "task_results_experiments_v1.parquet",
+        "task_results_csv_path": meta_dir / "task_results_experiments_v1.csv",
+        "split_assignments_csv_path": meta_dir / "split_assignments_experiments_v1.csv",
+        "repeat_aggregated_results_csv_path": meta_dir / "repeat_aggregated_results_experiments_v1.csv",
+        "best_single_baseline_by_repeat_csv_path": meta_dir / "best_single_baseline_by_repeat_experiments_v1.csv",
+        "feature_list_csv_path": meta_dir / "feature_list_experiments_v1.csv",
+        "pruned_feature_list_csv_path": meta_dir / "pruned_feature_list_experiments_v1.csv",
+        "dropped_correlation_pairs_csv_path": meta_dir / "dropped_correlation_pairs_experiments_v1.csv",
+        "feature_manifest_json_path": meta_dir / "feature_manifest_experiments_v1.json",
+        "comparison_table_csv_path": meta_dir / "comparison_table_experiments_v1.csv",
+        "candidate_models_csv_path": meta_dir / "candidate_models_experiments_v1.csv",
+        "feature_importance_csv_path": meta_dir / "feature_importance_experiments_v1.csv",
+        "prediction_examples_csv_path": meta_dir / "prediction_examples_experiments_v1.csv",
+        "classification_probabilities_csv_path": meta_dir / "classification_probabilities_experiments_v1.csv",
+        "excel_report_path": reports_dir / "meta_modeling_experiments_v1.xlsx",
+    }
+    for key, default_value in defaults.items():
+        outputs_cfg.setdefault(key, str(default_value))
+        outputs_cfg[key] = _resolve_path(str(outputs_cfg[key]))
+
+    merged: Dict[str, Any] = {
+        "run_name": stage_cfg.get("run_name", "meta_modeling_experiments_v1"),
+        "stage": stage_cfg.get("stage", "meta_modeling_experiments"),
+        "inputs": inputs_cfg,
+        "dataset_filter": stage_cfg.get("dataset_filter", ""),
+        "join_keys": stage_cfg.get("join_keys", ["series_id", "ticker"]),
+        "target_metrics": stage_cfg.get("target_metrics", ["rmse", "directional_accuracy"]),
+        "metric_columns": stage_cfg.get("metric_columns", {}),
+        "methods": stage_cfg.get("methods", ["regression", "classification", "scoring"]),
+        "meta_models": stage_cfg.get("meta_models", ["ridge", "random_forest", "catboost"]),
+        "classification_models": stage_cfg.get(
+            "classification_models",
+            ["logistic_regression", "random_forest_classifier", "catboost_classifier"],
+        ),
+        "scoring_models": stage_cfg.get("scoring_models", ["ridge", "random_forest", "catboost"]),
+        "model_overrides": stage_cfg.get("model_overrides", {}),
+        "feature_pruning": stage_cfg.get("feature_pruning", {"corr_threshold": 0.90}),
+        "candidate_selection": stage_cfg.get("candidate_selection", {"top_k_values": [5], "closeness_tolerance": 0.05}),
+        "split": stage_cfg.get(
+            "split",
+            {
+                "test_size": 0.2,
+                "validation_size": 0.1,
+                "random_seed": 42,
+                "n_repeats": 3,
+                "random_seeds": [],
+            },
+        ),
+        "prediction_examples_per_task": int(stage_cfg.get("prediction_examples_per_task", 5)),
+        "outputs": outputs_cfg,
+        "artifacts": artifacts_cfg,
+        "meta": {
+            "config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+            "project_root": str(project_root),
+        },
+    }
+
+    required_inputs = ["features_path", "forecasting_series_metrics_path"]
+    missing_inputs = [k for k in required_inputs if not str(merged["inputs"].get(k, "")).strip()]
+    if missing_inputs:
+        raise ConfigError(f"Missing experimental meta-modeling inputs: {', '.join(missing_inputs)}")
+
+    merged["meta"]["config_hash"] = _compute_hash(
+        {
+            "stage_config": stage_cfg,
+            "paths_config": paths_cfg,
+            "stage_config_path": str(stage_config_path),
+            "paths_config_path": str(paths_cfg_path),
+        }
+    )
+    return merged
