@@ -1,0 +1,132 @@
+{
+  "run_id": "meta_modeling_v1_20260331T120829Z",
+  "stage": "meta_modeling",
+  "timestamp_start": "2026-03-31T12:08:29.198769+00:00",
+  "timestamp_end": "2026-03-31T12:09:28.167198+00:00",
+  "git_commit": "99dbd3892abce7a0bcfb729088f25799526f63de",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\meta_modeling_v1.yaml",
+  "input_sources": {
+    "features_path": "D:\\Projects\\TS_fcst\\artifacts\\features\\final_clustering_features_with_chaos_v1.parquet",
+    "forecasting_series_metrics_path": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\series_metrics_smoke_v1.parquet",
+    "forecasting_manifest_path": "D:\\Projects\\TS_fcst\\artifacts\\manifests\\forecasting_benchmark_smoke_v1_20260330T083533Z.json"
+  },
+  "feature_manifest": {
+    "feature_source_path": "D:\\Projects\\TS_fcst\\artifacts\\features\\final_clustering_features_with_chaos_v1.parquet",
+    "feature_set_kind": "final_curated_feature_set",
+    "feature_count": 25,
+    "features": [
+      "hurst_rs",
+      "hurst_dfa",
+      "acf_lag_2",
+      "acf_lag_5",
+      "acf_lag_10",
+      "acf_lag_25",
+      "acf_lag_50",
+      "acf_lag_100",
+      "abs_acf_lag_2",
+      "abs_acf_lag_5",
+      "abs_acf_lag_10",
+      "abs_acf_lag_25",
+      "abs_acf_lag_50",
+      "vr_q10",
+      "lb_ret_stat_50",
+      "lz_complexity",
+      "permutation_entropy",
+      "spectral_flatness",
+      "kurtosis",
+      "robust_kurtosis",
+      "tail_ratio_upper",
+      "hill_tail_index",
+      "correlation_dimension",
+      "embedding_dimension",
+      "selected_delay_tau"
+    ],
+    "feature_dtypes": {
+      "hurst_rs": "float64",
+      "hurst_dfa": "float64",
+      "acf_lag_2": "float64",
+      "acf_lag_5": "float64",
+      "acf_lag_10": "float64",
+      "acf_lag_25": "float64",
+      "acf_lag_50": "float64",
+      "acf_lag_100": "float64",
+      "abs_acf_lag_2": "float64",
+      "abs_acf_lag_5": "float64",
+      "abs_acf_lag_10": "float64",
+      "abs_acf_lag_25": "float64",
+      "abs_acf_lag_50": "float64",
+      "vr_q10": "float64",
+      "lb_ret_stat_50": "float64",
+      "lz_complexity": "float64",
+      "permutation_entropy": "float64",
+      "spectral_flatness": "float64",
+      "kurtosis": "float64",
+      "robust_kurtosis": "float64",
+      "tail_ratio_upper": "float64",
+      "hill_tail_index": "float64",
+      "correlation_dimension": "float64",
+      "embedding_dimension": "float64",
+      "selected_delay_tau": "float64"
+    }
+  },
+  "outputs": {
+    "meta_dataset_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_v1.csv",
+    "meta_dataset_summary_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_v1.parquet",
+    "model_order_mapping_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\model_order_mapping_v1.csv",
+    "routing_rows_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_v1.parquet",
+    "routing_rows_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_v1.csv",
+    "task_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_v1.csv",
+    "task_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_v1.parquet",
+    "split_assignments_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\split_assignments_v1.csv",
+    "repeat_aggregated_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\repeat_aggregated_results_v1.csv",
+    "best_single_baseline_by_repeat_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\best_single_baseline_by_repeat_v1.csv",
+    "forecasting_mean_by_model_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\forecasting_mean_by_model_v1.csv",
+    "forecasting_model_ranking_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\forecasting_model_ranking_v1.csv",
+    "best_single_global_baseline_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\best_single_global_baseline_v1.csv",
+    "forecasting_model_wins_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\forecasting_model_wins_v1.csv",
+    "feature_list_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\feature_list_v1.csv",
+    "feature_manifest_json": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\feature_manifest_v1.json",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\meta_modeling_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\meta_modeling_v1_20260331T120829Z.log"
+  },
+  "summary": {
+    "n_rows_meta_long": 3300,
+    "n_series": 100,
+    "horizons": [
+      1,
+      5,
+      20
+    ],
+    "models": [
+      "chaotic_esn",
+      "chaotic_logistic_net",
+      "chaotic_lstm_forecast",
+      "chaotic_mlp",
+      "esn",
+      "lstm_forecast",
+      "naive_mean",
+      "naive_zero",
+      "ridge_lag",
+      "transient_chaotic_esn",
+      "vanilla_mlp"
+    ],
+    "target_metrics": [
+      "rmse",
+      "directional_accuracy"
+    ],
+    "meta_models": [
+      "ridge",
+      "random_forest",
+      "catboost"
+    ],
+    "repeat_splits": 3,
+    "repeat_seeds": [
+      42,
+      10015,
+      19988
+    ],
+    "tasks_total": 54,
+    "tasks_success": 54,
+    "tasks_failed": 0
+  }
+}

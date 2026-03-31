@@ -690,3 +690,46 @@ def export_architecture_tuning_final_shortlist_excel(
         parameter_snapshot_df.to_excel(writer, sheet_name="parameter_snapshot", index=False)
         readme_df.to_excel(writer, sheet_name="readme", index=False)
     return out_path
+
+
+def export_meta_modeling_excel(
+    excel_path: str | Path,
+    summary_df: pd.DataFrame,
+    task_results_df: pd.DataFrame,
+    routing_df: pd.DataFrame,
+    model_order_df: pd.DataFrame,
+    dataset_summary_df: pd.DataFrame,
+    split_df: pd.DataFrame,
+    forecasting_mean_df: pd.DataFrame | None = None,
+    forecasting_ranking_df: pd.DataFrame | None = None,
+    best_single_global_df: pd.DataFrame | None = None,
+    model_wins_df: pd.DataFrame | None = None,
+    repeat_agg_df: pd.DataFrame | None = None,
+    feature_list_df: pd.DataFrame | None = None,
+    best_single_repeat_df: pd.DataFrame | None = None,
+) -> Path:
+    """Export meta-modeling artifacts into a compact multi-sheet Excel report."""
+    out_path = Path(excel_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out_path) as writer:
+        summary_df.to_excel(writer, sheet_name="summary", index=False)
+        task_results_df.to_excel(writer, sheet_name="task_results", index=False)
+        routing_df.to_excel(writer, sheet_name="routing_rows", index=False)
+        model_order_df.to_excel(writer, sheet_name="model_order_mapping", index=False)
+        dataset_summary_df.to_excel(writer, sheet_name="meta_dataset_summary", index=False)
+        split_df.to_excel(writer, sheet_name="split_assignments", index=False)
+        if forecasting_mean_df is not None:
+            forecasting_mean_df.to_excel(writer, sheet_name="forecasting_mean", index=False)
+        if forecasting_ranking_df is not None:
+            forecasting_ranking_df.to_excel(writer, sheet_name="forecasting_ranking", index=False)
+        if best_single_global_df is not None:
+            best_single_global_df.to_excel(writer, sheet_name="best_single_global", index=False)
+        if model_wins_df is not None:
+            model_wins_df.to_excel(writer, sheet_name="model_wins", index=False)
+        if repeat_agg_df is not None:
+            repeat_agg_df.to_excel(writer, sheet_name="repeat_aggregates", index=False)
+        if feature_list_df is not None:
+            feature_list_df.to_excel(writer, sheet_name="feature_list", index=False)
+        if best_single_repeat_df is not None:
+            best_single_repeat_df.to_excel(writer, sheet_name="best_single_repeat", index=False)
+    return out_path

@@ -1,0 +1,8 @@
+2026-03-31 14:06:47 | INFO | Meta-modeling config loaded: D:\Projects\TS_fcst\configs\meta_modeling_v1.yaml
+2026-03-31 14:06:47 | INFO | meta_modeling start run_id=meta_modeling_v1_20260331T110647Z rows=3300 series=100 horizons=3 models=11
+2026-03-31 14:06:48 | WARNING | meta_model failed model=catboost horizon=1 metric=rmse err=catboost is not installed in the current environment
+2026-03-31 14:06:48 | WARNING | meta_model failed model=catboost horizon=1 metric=directional_accuracy err=catboost is not installed in the current environment
+2026-03-31 14:06:48 | WARNING | meta_model failed model=catboost horizon=5 metric=rmse err=catboost is not installed in the current environment
+2026-03-31 14:06:48 | WARNING | meta_model failed model=catboost horizon=5 metric=directional_accuracy err=catboost is not installed in the current environment
+2026-03-31 14:06:49 | WARNING | meta_model failed model=catboost horizon=20 metric=rmse err=catboost is not installed in the current environment
+2026-03-31 14:06:49 | WARNING | meta_model failed model=catboost horizon=20 metric=directional_accuracy err=catboost is not installed in the current environment

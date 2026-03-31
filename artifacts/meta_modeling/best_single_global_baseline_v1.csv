@@ -1,0 +1,7 @@
+horizon,target_metric,best_single_model,best_single_mean_metric,selection_rule,n_series
+1,rmse,esn,0.032258182667010415,minimum global mean metric across series,100
+5,rmse,naive_zero,0.1112674334860787,minimum global mean metric across series,100
+20,rmse,naive_zero,0.20835468152851241,minimum global mean metric across series,100
+1,directional_accuracy,esn,0.6697793708516615,maximum global mean metric across series,100
+5,directional_accuracy,esn,0.5251110413392175,maximum global mean metric across series,100
+20,directional_accuracy,transient_chaotic_esn,0.5014521105112055,maximum global mean metric across series,100

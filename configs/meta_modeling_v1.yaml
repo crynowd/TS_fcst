@@ -1,0 +1,63 @@
+run_name: meta_modeling_v1
+stage: meta_modeling
+
+inputs:
+  features_path: artifacts/features/final_clustering_features_with_chaos_v1.parquet
+  forecasting_series_metrics_path: artifacts/forecasting/series_metrics_smoke_v1.parquet
+  forecasting_manifest_path: artifacts/manifests/forecasting_benchmark_smoke_v1_20260330T083533Z.json
+
+dataset_filter: ""
+join_keys:
+  - series_id
+  - ticker
+
+target_metrics:
+  - rmse
+  - directional_accuracy
+
+metric_columns:
+  rmse: rmse_mean
+  directional_accuracy: directional_accuracy_mean
+
+meta_models:
+  - ridge
+  - random_forest
+  - catboost
+
+model_overrides:
+  ridge:
+    alpha: 1.0
+  random_forest:
+    n_estimators: 200
+    max_depth: 8
+    n_jobs: -1
+  catboost:
+    iterations: 300
+    depth: 6
+    learning_rate: 0.05
+
+split:
+  test_size: 0.2
+  validation_size: 0.1
+  random_seed: 42
+  n_repeats: 3
+  random_seeds: []
+
+outputs:
+  meta_dataset_summary_csv_path: artifacts/meta_modeling/meta_dataset_summary_v1.csv
+  meta_dataset_summary_parquet_path: artifacts/meta_modeling/meta_dataset_summary_v1.parquet
+  model_order_mapping_csv_path: artifacts/meta_modeling/model_order_mapping_v1.csv
+  routing_rows_parquet_path: artifacts/meta_modeling/routing_rows_v1.parquet
+  routing_rows_csv_path: artifacts/meta_modeling/routing_rows_v1.csv
+  task_results_parquet_path: artifacts/meta_modeling/task_results_v1.parquet
+  task_results_csv_path: artifacts/meta_modeling/task_results_v1.csv
+  split_assignments_csv_path: artifacts/meta_modeling/split_assignments_v1.csv
+  repeat_aggregated_results_csv_path: artifacts/meta_modeling/repeat_aggregated_results_v1.csv
+  best_single_baseline_by_repeat_csv_path: artifacts/meta_modeling/best_single_baseline_by_repeat_v1.csv
+  forecasting_mean_by_model_csv_path: artifacts/meta_modeling/forecasting_mean_by_model_v1.csv
+  forecasting_model_ranking_csv_path: artifacts/meta_modeling/forecasting_model_ranking_v1.csv
+  best_single_global_baseline_csv_path: artifacts/meta_modeling/best_single_global_baseline_v1.csv
+  forecasting_model_wins_csv_path: artifacts/meta_modeling/forecasting_model_wins_v1.csv
+  feature_list_csv_path: artifacts/meta_modeling/feature_list_v1.csv
+  feature_manifest_json_path: artifacts/meta_modeling/feature_manifest_v1.json
+  excel_report_path: artifacts/reports/meta_modeling_v1.xlsx

@@ -1,0 +1,2 @@
+2026-03-31 15:08:29 | INFO | Meta-modeling config loaded: D:\Projects\TS_fcst\configs\meta_modeling_v1.yaml
+2026-03-31 15:08:29 | INFO | meta_modeling start run_id=meta_modeling_v1_20260331T120829Z rows=3300 series=100 horizons=3 models=11 repeats=3

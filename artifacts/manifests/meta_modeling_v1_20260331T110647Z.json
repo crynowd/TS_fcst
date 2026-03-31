@@ -1,0 +1,58 @@
+{
+  "run_id": "meta_modeling_v1_20260331T110647Z",
+  "stage": "meta_modeling",
+  "timestamp_start": "2026-03-31T11:06:47.841429+00:00",
+  "timestamp_end": "2026-03-31T11:06:49.759847+00:00",
+  "git_commit": "99dbd3892abce7a0bcfb729088f25799526f63de",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\meta_modeling_v1.yaml",
+  "input_sources": {
+    "features_path": "D:\\Projects\\TS_fcst\\artifacts\\features\\final_clustering_features_with_chaos_v1.parquet",
+    "forecasting_series_metrics_path": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\series_metrics_smoke_v1.parquet",
+    "forecasting_manifest_path": "D:\\Projects\\TS_fcst\\artifacts\\manifests\\forecasting_benchmark_smoke_v1_20260330T083533Z.json"
+  },
+  "outputs": {
+    "meta_dataset_summary_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_v1.csv",
+    "meta_dataset_summary_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\meta_dataset_summary_v1.parquet",
+    "model_order_mapping_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\model_order_mapping_v1.csv",
+    "routing_rows_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_v1.parquet",
+    "routing_rows_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\routing_rows_v1.csv",
+    "task_results_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_v1.csv",
+    "task_results_parquet": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\task_results_v1.parquet",
+    "split_assignments_csv": "D:\\Projects\\TS_fcst\\artifacts\\meta_modeling\\split_assignments_v1.csv",
+    "excel_report": "D:\\Projects\\TS_fcst\\artifacts\\reports\\meta_modeling_v1.xlsx",
+    "log": "D:\\Projects\\TS_fcst\\artifacts\\logs\\meta_modeling_v1_20260331T110647Z.log"
+  },
+  "summary": {
+    "n_rows_meta_long": 3300,
+    "n_series": 100,
+    "horizons": [
+      1,
+      5,
+      20
+    ],
+    "models": [
+      "chaotic_esn",
+      "chaotic_logistic_net",
+      "chaotic_lstm_forecast",
+      "chaotic_mlp",
+      "esn",
+      "lstm_forecast",
+      "naive_mean",
+      "naive_zero",
+      "ridge_lag",
+      "transient_chaotic_esn",
+      "vanilla_mlp"
+    ],
+    "target_metrics": [
+      "rmse",
+      "directional_accuracy"
+    ],
+    "meta_models": [
+      "ridge",
+      "random_forest",
+      "catboost"
+    ],
+    "tasks_total": 18,
+    "tasks_success": 12
+  }
+}
