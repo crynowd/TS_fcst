@@ -5,6 +5,9 @@ inputs:
   features_path: artifacts/features/final_clustering_features_with_chaos_v1.parquet
   forecasting_series_metrics_path: artifacts/forecasting/series_metrics_smoke_v1.parquet
   forecasting_manifest_path: artifacts/manifests/forecasting_benchmark_smoke_v1_20260330T083533Z.json
+  log_returns_path: artifacts/processed/log_returns_v1.parquet
+
+auto_select_latest_forecasting: true
 
 dataset_filter: ""
 join_keys:
@@ -20,9 +23,7 @@ metric_columns:
   directional_accuracy: directional_accuracy_mean
 
 methods:
-  - regression
   - classification
-  - scoring
 
 meta_models:
   - ridge
@@ -66,14 +67,29 @@ feature_pruning:
   corr_threshold: 0.90
 
 candidate_selection:
-  top_k_values: [4, 6]
+  top_k_values: [3, 4, 5, 6]
   closeness_tolerance: 0.05
+
+balancing_modes:
+  - default
+  - balanced
+
+confidence_thresholds: [0.50, 0.60, 0.70, 0.80]
+
+basic_features:
+  enabled: true
+  rolling_window: 20
+
+feature_selection:
+  method: mutual_info
+  top_n: 30
+  min_features: 5
 
 split:
   test_size: 0.2
   validation_size: 0.1
   random_seed: 42
-  n_repeats: 3
+  n_repeats: 5
   random_seeds: []
 
 prediction_examples_per_task: 5

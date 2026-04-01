@@ -26,7 +26,20 @@
     "embedding_dimension",
     "selected_delay_tau"
   ],
-  "pruned_features": [
+  "basic_features": [
+    "basic_ts_mean",
+    "basic_ts_std",
+    "basic_ts_skewness",
+    "basic_ts_kurtosis",
+    "basic_ts_positive_share",
+    "basic_ts_negative_share",
+    "basic_ts_sign_change_rate",
+    "basic_ts_zero_crossing_rate",
+    "basic_ts_abs_volatility_mean",
+    "basic_ts_rolling_vol_mean",
+    "basic_ts_rolling_vol_std"
+  ],
+  "full_plus_basic_features": [
     "hurst_rs",
     "hurst_dfa",
     "acf_lag_2",
@@ -51,7 +64,18 @@
     "hill_tail_index",
     "correlation_dimension",
     "embedding_dimension",
-    "selected_delay_tau"
+    "selected_delay_tau",
+    "basic_ts_mean",
+    "basic_ts_std",
+    "basic_ts_skewness",
+    "basic_ts_kurtosis",
+    "basic_ts_positive_share",
+    "basic_ts_negative_share",
+    "basic_ts_sign_change_rate",
+    "basic_ts_zero_crossing_rate",
+    "basic_ts_abs_volatility_mean",
+    "basic_ts_rolling_vol_mean",
+    "basic_ts_rolling_vol_std"
   ],
-  "corr_threshold": 0.9
+  "selection_method": "mutual_info"
 }

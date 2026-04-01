@@ -8,6 +8,14 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_recall_fscore_support,
+)
 
 from src.meta_modeling.models import (
     MetaModelError,
@@ -95,9 +103,112 @@ def _feature_columns(features_df: pd.DataFrame, join_key: str) -> list[str]:
     return cols
 
 
+def _find_latest_forecasting_manifest(manifests_dir: Path) -> Path | None:
+    files = sorted(manifests_dir.glob("forecasting_benchmark*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0] if files else None
+
+
+def _resolve_latest_forecasting_inputs(cfg: dict[str, Any]) -> tuple[str, str]:
+    inputs = dict(cfg.get("inputs", {}))
+    configured_series = str(inputs.get("forecasting_series_metrics_path", "")).strip()
+    configured_manifest = str(inputs.get("forecasting_manifest_path", "")).strip()
+    if not bool(cfg.get("auto_select_latest_forecasting", True)):
+        return configured_series, configured_manifest
+
+    manifests_dir = Path(str(cfg.get("artifacts", {}).get("manifests", ""))).resolve()
+    latest_manifest = _find_latest_forecasting_manifest(manifests_dir) if manifests_dir.exists() else None
+    if latest_manifest is not None:
+        try:
+            payload = json.loads(latest_manifest.read_text(encoding="utf-8"))
+            outputs = payload.get("outputs", {}) if isinstance(payload, dict) else {}
+            series_path = Path(str(outputs.get("series_metrics", ""))).resolve()
+            if series_path.exists():
+                return str(series_path), str(latest_manifest)
+        except Exception:
+            pass
+
+    if configured_series and Path(configured_series).exists():
+        return configured_series, configured_manifest
+    raise ValueError("Cannot resolve forecasting_series_metrics_path from current artifacts")
+
+
+def _compute_basic_features(log_returns_df: pd.DataFrame, join_key: str, rolling_window: int) -> pd.DataFrame:
+    value_col = "log_return" if "log_return" in log_returns_df.columns else "value"
+    if value_col not in log_returns_df.columns:
+        return pd.DataFrame(columns=[join_key])
+
+    work = log_returns_df[[join_key, value_col]].copy()
+    work[value_col] = pd.to_numeric(work[value_col], errors="coerce")
+    work = work.dropna(subset=[join_key, value_col])
+
+    rows: list[dict[str, Any]] = []
+    for sid, g in work.groupby(join_key, sort=False):
+        s = pd.to_numeric(g[value_col], errors="coerce").dropna()
+        if s.empty:
+            continue
+        arr = s.to_numpy(dtype=np.float64)
+        signs = np.sign(arr)
+        sign_changes = float(np.mean(signs[1:] * signs[:-1] < 0)) if len(signs) > 1 else np.nan
+        rolling_vol = s.rolling(window=max(2, int(rolling_window))).std(ddof=0)
+        rows.append(
+            {
+                join_key: sid,
+                "basic_ts_mean": float(np.mean(arr)),
+                "basic_ts_std": float(np.std(arr, ddof=0)),
+                "basic_ts_skewness": float(pd.Series(arr).skew()),
+                "basic_ts_kurtosis": float(pd.Series(arr).kurt()),
+                "basic_ts_positive_share": float(np.mean(arr > 0)),
+                "basic_ts_negative_share": float(np.mean(arr < 0)),
+                "basic_ts_sign_change_rate": float(sign_changes) if sign_changes == sign_changes else np.nan,
+                "basic_ts_zero_crossing_rate": float(np.mean(np.diff(np.signbit(arr)).astype(np.float64))) if len(arr) > 1 else np.nan,
+                "basic_ts_abs_volatility_mean": float(np.mean(np.abs(arr))),
+                "basic_ts_rolling_vol_mean": float(rolling_vol.mean(skipna=True)),
+                "basic_ts_rolling_vol_std": float(rolling_vol.std(skipna=True)),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _train_only_feature_selection(
+    X_train: np.ndarray,
+    y_train_cls: np.ndarray,
+    feature_cols: list[str],
+    cfg: dict[str, Any],
+) -> tuple[np.ndarray, list[str], dict[str, Any]]:
+    fs_cfg = dict(cfg.get("feature_selection", {}))
+    method = str(fs_cfg.get("method", "mutual_info"))
+    top_n = int(fs_cfg.get("top_n", min(30, len(feature_cols))))
+    min_features = int(fs_cfg.get("min_features", 5))
+
+    if method != "mutual_info" or len(feature_cols) <= min_features:
+        idx = np.arange(len(feature_cols), dtype=int)
+        return idx, list(feature_cols), {"method": "passthrough", "top_n": len(feature_cols), "min_features": min_features}
+
+    scores = mutual_info_classif(
+        X_train,
+        y_train_cls,
+        discrete_features=False,
+        random_state=int(cfg.get("split", {}).get("random_seed", 42)),
+    )
+    scores = np.asarray(scores, dtype=np.float64)
+    ranked = np.argsort(np.nan_to_num(scores, nan=-1.0))[::-1]
+    keep_n = max(min_features, min(top_n, len(feature_cols)))
+    selected_idx = np.sort(ranked[:keep_n])
+    selected_features = [feature_cols[i] for i in selected_idx]
+    return selected_idx, selected_features, {
+        "method": "mutual_info",
+        "top_n": int(top_n),
+        "min_features": int(min_features),
+        "selected_count": int(len(selected_features)),
+    }
+
+
 def build_meta_dataset(cfg: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
     features_df = pd.read_parquet(str(cfg["inputs"]["features_path"])).copy()
-    forecasting_df = pd.read_parquet(str(cfg["inputs"]["forecasting_series_metrics_path"])).copy()
+    forecasting_series_path, forecasting_manifest_path = _resolve_latest_forecasting_inputs(cfg)
+    cfg["inputs"]["forecasting_series_metrics_path"] = forecasting_series_path
+    cfg["inputs"]["forecasting_manifest_path"] = forecasting_manifest_path
+    forecasting_df = pd.read_parquet(forecasting_series_path).copy()
 
     join_key = _pick_join_key(features_df, forecasting_df, cfg)
     metric_cols = _resolve_metric_columns(forecasting_df, cfg)
@@ -109,6 +220,25 @@ def build_meta_dataset(cfg: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any
     feature_cols = _feature_columns(features_df, join_key=join_key)
     keep_cols = [join_key] + ([c for c in ["ticker", "market", "dataset_profile"] if c in features_df.columns]) + feature_cols
     features_dedup = features_df[keep_cols].drop_duplicates(subset=[join_key], keep="first").copy()
+
+    basic_feature_cols: list[str] = []
+    basic_source_path = ""
+    if bool(cfg.get("basic_features", {}).get("enabled", True)):
+        project_root = Path(str(cfg.get("meta", {}).get("project_root", "."))).resolve()
+        default_log_returns_path = project_root / "artifacts" / "processed" / "log_returns_v1.parquet"
+        log_returns_path = Path(str(cfg.get("inputs", {}).get("log_returns_path", str(default_log_returns_path))))
+        if log_returns_path.exists():
+            log_returns_df = pd.read_parquet(log_returns_path)
+            if join_key in log_returns_df.columns:
+                basic_df = _compute_basic_features(
+                    log_returns_df=log_returns_df,
+                    join_key=join_key,
+                    rolling_window=int(cfg.get("basic_features", {}).get("rolling_window", 20)),
+                )
+                if not basic_df.empty:
+                    basic_feature_cols = [c for c in basic_df.columns if c != join_key]
+                    features_dedup = features_dedup.merge(basic_df, on=join_key, how="left")
+                    basic_source_path = str(log_returns_path.resolve())
 
     merged = forecasting_df.merge(features_dedup, on=join_key, how="inner")
     merged = merged.dropna(subset=["horizon", "model_name"])
@@ -122,7 +252,11 @@ def build_meta_dataset(cfg: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any
     summary = {
         "join_key": join_key,
         "feature_cols": feature_cols,
+        "basic_feature_cols": basic_feature_cols,
         "feature_source_path": str(cfg["inputs"]["features_path"]),
+        "basic_feature_source_path": basic_source_path,
+        "forecasting_series_metrics_path": forecasting_series_path,
+        "forecasting_manifest_path": forecasting_manifest_path,
         "metric_columns": metric_cols,
         "n_rows": int(len(merged)),
         "n_series": int(merged[join_key].nunique()),
@@ -367,7 +501,11 @@ def _evaluate_predictions(
     top2_idx: np.ndarray | None = None,
     confidence: np.ndarray | None = None,
     class_probability_json: list[str] | None = None,
-) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
+    balancing_mode: str = "default",
+    decision_rule: str = "top_1",
+    confidence_threshold: float | None = None,
+    selected_feature_count: int | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     direction = METRIC_DIRECTIONS[task.target_metric]
     y_test = task.y[split.test]
     y_train = task.y[split.train]
@@ -378,6 +516,9 @@ def _evaluate_predictions(
     rows: list[dict[str, Any]] = []
     routing_hits: list[int] = []
     top2_hits: list[int] = []
+    pred_classes: list[int] = []
+    true_classes: list[int] = []
+    fallback_hits: list[int] = []
     for i in range(y_test.shape[0]):
         actual_row = y_test[i]
         pred_idx = int(selected_idx[i])
@@ -393,6 +534,9 @@ def _evaluate_predictions(
             gap = oracle_metric - achieved
         hit = int(pred_idx == oracle_idx)
         routing_hits.append(hit)
+        pred_classes.append(pred_idx)
+        true_classes.append(oracle_idx)
+        fallback_hits.append(int(confidence_threshold is not None and confidence is not None and float(confidence[i]) < float(confidence_threshold)))
         top2_hit = np.nan
         top2_model = ""
         if top2_idx is not None:
@@ -411,7 +555,11 @@ def _evaluate_predictions(
                 "target_metric": task.target_metric,
                 "feature_set": task.feature_set,
                 "candidate_set": task.candidate_set,
+                "selected_feature_count": int(selected_feature_count) if selected_feature_count is not None else int(len(task.feature_cols)),
                 "series_id": str(row_ids_test[i]),
+                "balancing_mode": balancing_mode,
+                "decision_rule": decision_rule,
+                "confidence_threshold": float(confidence_threshold) if confidence_threshold is not None else np.nan,
                 "selected_model": task.model_order[pred_idx],
                 "selected_model_top2": top2_model,
                 "oracle_model": task.model_order[oracle_idx],
@@ -424,6 +572,7 @@ def _evaluate_predictions(
                 "routing_hit_oracle": hit,
                 "top2_hit_oracle": top2_hit,
                 "confidence": float(confidence[i]) if confidence is not None else np.nan,
+                "fallback_applied": int(fallback_hits[-1]),
                 "predicted_scores_json": json.dumps([float(x) for x in predicted_scores[i]]),
                 "actual_metric_vector_json": json.dumps([float(x) for x in actual_row]),
                 "model_order_json": json.dumps(task.model_order),
@@ -432,6 +581,10 @@ def _evaluate_predictions(
         )
 
     routing_df = pd.DataFrame(rows)
+    acc = float(accuracy_score(true_classes, pred_classes)) if pred_classes else np.nan
+    bal_acc = float(balanced_accuracy_score(true_classes, pred_classes)) if pred_classes else np.nan
+    macro_f1 = float(f1_score(true_classes, pred_classes, average="macro", zero_division=0)) if pred_classes else np.nan
+    weighted_f1 = float(f1_score(true_classes, pred_classes, average="weighted", zero_division=0)) if pred_classes else np.nan
     summary = {
         "run_id": run_id,
         "repeat_id": int(repeat_id),
@@ -442,6 +595,10 @@ def _evaluate_predictions(
         "target_metric": task.target_metric,
         "feature_set": task.feature_set,
         "candidate_set": task.candidate_set,
+        "selected_feature_count": int(selected_feature_count) if selected_feature_count is not None else int(len(task.feature_cols)),
+        "balancing_mode": balancing_mode,
+        "decision_rule": decision_rule,
+        "confidence_threshold": float(confidence_threshold) if confidence_threshold is not None else np.nan,
         "n_test_series": int(len(routing_df)),
         "achieved_metric": float(pd.to_numeric(routing_df["achieved_metric"], errors="coerce").mean()),
         "best_single_metric": float(pd.to_numeric(routing_df["baseline_metric"], errors="coerce").mean()),
@@ -449,8 +606,12 @@ def _evaluate_predictions(
         "improvement_vs_best_single": float(pd.to_numeric(routing_df["improvement_vs_best_single"], errors="coerce").mean()),
         "gap_to_oracle": float(pd.to_numeric(routing_df["gap_to_oracle"], errors="coerce").mean()),
         "routing_hit_oracle_rate": float(np.mean(routing_hits)) if routing_hits else np.nan,
-        "classification_accuracy": float(np.mean(routing_hits)) if method == "classification" else np.nan,
+        "classification_accuracy": acc,
+        "balanced_accuracy": bal_acc,
+        "macro_f1": macro_f1,
+        "weighted_f1": weighted_f1,
         "top2_hit_rate": float(np.mean(top2_hits)) if top2_hits else np.nan,
+        "fallback_rate": float(np.mean(fallback_hits)) if fallback_hits else 0.0,
         "status": "success",
         "notes": "",
     }
@@ -462,11 +623,99 @@ def _evaluate_predictions(
         "target_metric": task.target_metric,
         "feature_set": task.feature_set,
         "candidate_set": task.candidate_set,
+        "selected_feature_count": int(selected_feature_count) if selected_feature_count is not None else int(len(task.feature_cols)),
+        "balancing_mode": balancing_mode,
+        "decision_rule": decision_rule,
+        "confidence_threshold": float(confidence_threshold) if confidence_threshold is not None else np.nan,
         "best_single_model": baseline["baseline_model"],
         "best_single_train_mean_metric": float(baseline["train_mean_by_model"][baseline["baseline_idx"]]),
         "best_single_test_mean_metric": summary["best_single_metric"],
     }
-    return routing_df, summary, baseline_row
+    labels = list(range(len(task.model_order)))
+    precisions, recalls, f1s, supports = precision_recall_fscore_support(
+        true_classes,
+        pred_classes,
+        labels=labels,
+        zero_division=0,
+    )
+    per_class_rows = [
+        {
+            "run_id": run_id,
+            "repeat_id": int(repeat_id),
+            "split_seed": int(split_seed),
+            "model": model_name,
+            "horizon": int(task.horizon),
+            "target_metric": task.target_metric,
+            "feature_set": task.feature_set,
+            "candidate_set": task.candidate_set,
+            "balancing_mode": balancing_mode,
+            "decision_rule": decision_rule,
+            "class_idx": int(idx),
+            "class_model": task.model_order[idx],
+            "precision": float(precisions[idx]),
+            "recall": float(recalls[idx]),
+            "f1": float(f1s[idx]),
+            "support": int(supports[idx]),
+        }
+        for idx in labels
+    ]
+    cm = confusion_matrix(true_classes, pred_classes, labels=labels)
+    confusion_rows: list[dict[str, Any]] = []
+    for i, true_idx in enumerate(labels):
+        for j, pred_idx in enumerate(labels):
+            confusion_rows.append(
+                {
+                    "run_id": run_id,
+                    "repeat_id": int(repeat_id),
+                    "split_seed": int(split_seed),
+                    "model": model_name,
+                    "horizon": int(task.horizon),
+                    "target_metric": task.target_metric,
+                    "feature_set": task.feature_set,
+                    "candidate_set": task.candidate_set,
+                    "balancing_mode": balancing_mode,
+                    "decision_rule": decision_rule,
+                    "true_class_idx": int(true_idx),
+                    "true_model": task.model_order[int(true_idx)],
+                    "pred_class_idx": int(pred_idx),
+                    "pred_model": task.model_order[int(pred_idx)],
+                    "count": int(cm[i, j]),
+                }
+            )
+    class_distribution = {
+        "run_id": run_id,
+        "repeat_id": int(repeat_id),
+        "split_seed": int(split_seed),
+        "model": model_name,
+        "horizon": int(task.horizon),
+        "target_metric": task.target_metric,
+        "feature_set": task.feature_set,
+        "candidate_set": task.candidate_set,
+        "balancing_mode": balancing_mode,
+        "decision_rule": decision_rule,
+        "target_class_distribution_json": json.dumps(pd.Series(true_classes).value_counts().to_dict()),
+        "predicted_class_distribution_json": json.dumps(pd.Series(pred_classes).value_counts().to_dict()),
+    }
+    confidence_summary = {
+        "run_id": run_id,
+        "repeat_id": int(repeat_id),
+        "split_seed": int(split_seed),
+        "model": model_name,
+        "horizon": int(task.horizon),
+        "target_metric": task.target_metric,
+        "feature_set": task.feature_set,
+        "candidate_set": task.candidate_set,
+        "balancing_mode": balancing_mode,
+        "decision_rule": decision_rule,
+        "confidence_threshold": float(confidence_threshold) if confidence_threshold is not None else np.nan,
+        "confidence_min": float(np.min(confidence)) if confidence is not None and len(confidence) else np.nan,
+        "confidence_q25": float(np.quantile(confidence, 0.25)) if confidence is not None and len(confidence) else np.nan,
+        "confidence_median": float(np.median(confidence)) if confidence is not None and len(confidence) else np.nan,
+        "confidence_q75": float(np.quantile(confidence, 0.75)) if confidence is not None and len(confidence) else np.nan,
+        "confidence_max": float(np.max(confidence)) if confidence is not None and len(confidence) else np.nan,
+        "confidence_mean": float(np.mean(confidence)) if confidence is not None and len(confidence) else np.nan,
+    }
+    return routing_df, summary, baseline_row, per_class_rows, confusion_rows, [class_distribution], confidence_summary
 
 
 def run_meta_modeling_experiments(cfg: dict[str, Any], logger: Any) -> dict[str, Any]:
@@ -970,3 +1219,6 @@ def run_meta_modeling_experiments(cfg: dict[str, Any], logger: Any) -> dict[str,
         "tasks_total": int(len(task_results_df)),
         "tasks_success": int((task_results_df.get("status", pd.Series(dtype=str)) == "success").sum()),
     }
+
+
+from src.meta_modeling.classification_pipeline import run_meta_modeling_experiments as run_meta_modeling_experiments
