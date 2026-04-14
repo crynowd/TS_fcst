@@ -1,7 +1,0 @@
-2026-03-11 10:22:19 | INFO | Feature screening started
-2026-03-11 10:22:19 | INFO | Dataset profile: core_balanced
-2026-03-11 10:22:19 | INFO | Config path: D:\Projects\TS_fcst\configs\feature_screening_v1.yaml
-2026-03-11 10:22:19 | INFO | Feature files loaded: 4
-2026-03-11 10:22:19 | INFO | Master rows: 418
-2026-03-11 10:22:19 | INFO | Master columns: 141
-2026-03-11 10:22:19 | INFO | Feature columns: 116
