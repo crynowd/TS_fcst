@@ -1,95 +1,16 @@
 # TS_fcst
 
-Research project for classification of financial time series and construction of a meta-model for forecasting model selection.
+Исследовательский проект по прогнозированию финансовых временных рядов, анализу применимости хаотических моделей и метамоделированию для выбора лучшей модели прогнозирования.
 
-The project analyzes structural properties of financial time series and groups them into regimes based on statistical, spectral, distributional and nonlinear dynamics metrics.
+## Основной материал для просмотра
 
-The resulting classification will be used to build a meta-model that selects the most appropriate forecasting architecture depending on the detected regime.
+- [Исследовательский ноутбук](./TS_fcst_research_draft.ipynb)
 
----
+## Что содержится в репозитории
 
-## Main Goals
+- `src/` — реализация этапов пайплайна
+- `configs/` — конфигурации запусков
+- `artifacts/` — отчёты и результаты экспериментов
+- `tests/` — тесты ключевых компонентов
 
-1. Extract structural metrics of time series:
-   - memory and dependence
-   - spectral structure and noise
-   - tail properties of distributions
-   - nonlinear / chaos-like dynamics
-
-2. Cluster time series into structural regimes.
-
-3. Evaluate forecasting models across regimes.
-
-4. Build a meta-model that selects the best forecasting model depending on regime type.
-
----
-
-## Data
-
-Raw data is stored **outside the repository**.
-
-Example locations:
-
-RU market: D:\Projects\Data\Stocks\ru\D1
-US market: D:\Projects\Data\Stocks\us\Stocks
-
-
-Each file contains daily OHLCV data for one ticker.
-
----
-
-## Core Pipeline
-
-1. Data inventory and validation
-2. Log-return transformation
-3. Feature extraction (multiple blocks)
-4. Feature validation
-5. Clustering
-6. Forecasting experiments
-7. Meta-model construction
-
----
-
-## Project Structure
-
-See:
-
-- `PROJECT_STRUCTURE.md`
-- `DATA_LINEAGE.md`
-
----
-
-## Configuration
-
-All parameters are stored in YAML configs: configs/
-
-
-Examples:
-- paths.local.yaml
-- data_inventory_v1.yaml
-
----
-
-## Artifacts
-
-Generated artifacts are stored in: artifacts/
-
-but **not tracked by git**.
-
----
-
-## Status
-
-Early research phase.
-
-## Environment setup
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-## Тесты запускать так
-
-set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
-python -m pytest -q
+Для быстрого ознакомления рекомендуется начать с ноутбука.
