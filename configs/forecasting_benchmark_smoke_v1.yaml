@@ -3,7 +3,7 @@
 data:
   source_path: artifacts/processed/log_returns_v1.parquet
   dataset_profile: core_balanced
-  max_series: 100
+  max_series: 300
   series_selection_mode: first_n
 
 models:

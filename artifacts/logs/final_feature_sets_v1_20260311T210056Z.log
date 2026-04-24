@@ -1,9 +1,0 @@
-2026-03-12 00:00:56 | INFO | Final feature sets stage started
-2026-03-12 00:00:56 | INFO | Master table path: D:\Projects\TS_fcst\artifacts\features\features_master_v1.parquet
-2026-03-12 00:00:56 | INFO | Master table rows: 418
-2026-03-12 00:00:56 | INFO | Base set features: 22
-2026-03-12 00:00:56 | INFO | With-chaos set features: 25
-2026-03-12 00:00:56 | INFO | Base parquet path: D:\Projects\TS_fcst\artifacts\features\final_clustering_features_base_v1.parquet
-2026-03-12 00:00:56 | INFO | With-chaos parquet path: D:\Projects\TS_fcst\artifacts\features\final_clustering_features_with_chaos_v1.parquet
-2026-03-12 00:00:56 | INFO | Excel report path: D:\Projects\TS_fcst\artifacts\reports\final_clustering_feature_sets_v1.xlsx
-2026-03-12 00:00:56 | INFO | Execution time: 0.24 sec

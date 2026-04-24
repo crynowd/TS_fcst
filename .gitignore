@@ -1,0 +1,62 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Artifacts (generated files)
+artifacts/interim/
+artifacts/processed/
+artifacts/features/
+artifacts/logs/
+artifacts/manifests/
+artifacts/reports/
+
+# Data formats
+*.parquet
+*.xlsx
+*.xls
+*.log
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# CatBoost
+catboost_info/
+artifacts/meta_modeling/catboost_info/
+c a t b o o s t _ i n f o /  
+ c a t b o o s t _ i n f o /  
+ a r t i f a c t s / m e t a _ m o d e l i n g / * . c s v  
+ a r t i f a c t s / m e t a _ m o d e l i n g / * . c s v  
+ a r t i f a c t s / r e p o r t s / * . x l s x  
+ a r t i f a c t s / r e p o r t s / * . x l s x  
+ a r t i f a c t s / f o r e c a s t i n g / * . p a r q u e t  
+ c a t b o o s t _ i n f o /  
+ # Logs
+artifacts/logs/
+
+# CatBoost service files
+artifacts/meta_modeling/catboost_info/
+
+# Excel lock files
+~$*.xlsx
+**/~$*.xlsx
+
+# Heavy raw meta-modeling dumps
+artifacts/meta_modeling/routing_rows_experiments_v1.csv
+
+# Optional: other raw dumps if you decide to exclude them too
+# artifacts/meta_modeling/classification_probabilities_experiments_v1.csv
+# artifacts/meta_modeling/confusion_matrix_experiments_v1.csv
+# artifacts/meta_modeling/per_class_metrics_experiments_v1.csv
