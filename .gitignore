@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -21,7 +21,27 @@ artifacts/processed/
 artifacts/features/
 artifacts/logs/
 artifacts/manifests/
-artifacts/reports/
+artifacts/forecasting/*.parquet
+artifacts/forecasting/*.csv
+artifacts/forecasting/*.xlsx
+artifacts/forecasting/**/*.parquet
+artifacts/forecasting/**/*.csv
+artifacts/forecasting/**/*.xlsx
+artifacts/forecasting/**/*.json
+artifacts/forecasting/**/*.yaml
+artifacts/forecasting/**/predictions*
+artifacts/forecasting/**/temp/
+artifacts/meta_modeling/*.csv
+artifacts/reports/**/*.json
+artifacts/reports/**/*.csv
+artifacts/reports/**/*.parquet
+artifacts/reports/**/*.xlsx
+
+# Top-level generated diagnostics/reports.
+reports/*.json
+reports/*.csv
+reports/*.parquet
+reports/*.xlsx
 
 # Data formats
 *.parquet
@@ -34,19 +54,6 @@ artifacts/reports/
 
 # CatBoost
 catboost_info/
-artifacts/meta_modeling/catboost_info/
-c a t b o o s t _ i n f o /  
- c a t b o o s t _ i n f o /  
- a r t i f a c t s / m e t a _ m o d e l i n g / * . c s v  
- a r t i f a c t s / m e t a _ m o d e l i n g / * . c s v  
- a r t i f a c t s / r e p o r t s / * . x l s x  
- a r t i f a c t s / r e p o r t s / * . x l s x  
- a r t i f a c t s / f o r e c a s t i n g / * . p a r q u e t  
- c a t b o o s t _ i n f o /  
- # Logs
-artifacts/logs/
-
-# CatBoost service files
 artifacts/meta_modeling/catboost_info/
 
 # Excel lock files

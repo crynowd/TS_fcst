@@ -8,6 +8,7 @@ import pandas as pd
 import yaml
 
 from src.config.loader import load_forecasting_benchmark_config
+from src.forecasting.data import build_series_lookup, select_series
 from src.forecasting.io import FOLD_METRICS_COLUMNS, RAW_PREDICTION_COLUMNS, ensure_table_schema
 from src.forecasting.registry import build_model, get_model_specs
 from src.forecasting.runners import run_forecasting_benchmark
@@ -43,10 +44,39 @@ def test_window_builder_shapes() -> None:
     assert data.X.shape[1] == 8
     assert data.y.ndim == 1
     assert data.X.shape[0] == data.y.shape[0] == data.timestamps.shape[0]
+    assert np.all(data.feature_end_idx < data.target_start_idx)
+    assert np.all((data.target_end_idx - data.target_start_idx + 1) == 5)
 
     folds = build_rolling_origin_folds(n_samples=len(data.y), n_folds=3)
     assert len(folds) == 3
     assert folds[0].train_idx.max() < folds[0].test_idx.min()
+
+
+def test_series_lookup_respects_dataset_profile() -> None:
+    df = pd.DataFrame(
+        [
+            {
+                "series_id": "S1",
+                "ticker": "S1",
+                "market": "US",
+                "date": pd.Timestamp("2020-01-01"),
+                "log_return": 0.01,
+                "dataset_profile": "core_balanced",
+            },
+            {
+                "series_id": "S1",
+                "ticker": "S1",
+                "market": "US",
+                "date": pd.Timestamp("2020-01-01"),
+                "log_return": 0.02,
+                "dataset_profile": "other",
+            },
+        ]
+    )
+    selected = select_series(df, dataset_profile="core_balanced")
+    lookup = build_series_lookup(df, selected, dataset_profile="core_balanced")
+    assert len(lookup["S1"]) == 1
+    assert lookup["S1"]["dataset_profile"].unique().tolist() == ["core_balanced"]
 
 
 def test_model_registry_contains_expected_models() -> None:

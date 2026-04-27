@@ -467,6 +467,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
     artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
     if "forecasting" not in artifacts_cfg:
         artifacts_cfg["forecasting"] = str((project_root / "artifacts" / "forecasting").resolve())
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
 
     data_cfg = dict(stage_cfg.get("data", {}))
     source_path = Path(str(data_cfg.get("source_path", "artifacts/processed/log_returns_v1.parquet")))
@@ -478,17 +479,50 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
     forecasting_dir = Path(artifacts_cfg["forecasting"]).resolve()
     reports_dir = Path(artifacts_cfg.get("reports", project_root / "artifacts" / "reports")).resolve()
     output_cfg.setdefault("run_name", "forecasting_benchmark_smoke_v1")
+    run_id_cfg = str(output_cfg.get("run_id", "")).strip()
+    if run_id_cfg:
+        run_dir = Path(str(output_cfg.get("output_dir", forecasting_dir / run_id_cfg)))
+        if not run_dir.is_absolute():
+            run_dir = (project_root / run_dir).resolve()
+        output_cfg["output_dir"] = str(run_dir.resolve())
+        report_dir = Path(str(output_cfg.get("report_dir", reports_dir / "forecasting_audit_v2")))
+        if not report_dir.is_absolute():
+            report_dir = (project_root / report_dir).resolve()
+        output_cfg["report_dir"] = str(report_dir.resolve())
+        output_cfg.setdefault("metrics_long_path", str((run_dir / "metrics_long.parquet").resolve()))
+        output_cfg.setdefault("metrics_long_csv_path", str((run_dir / "metrics_long.csv").resolve()))
+        output_cfg.setdefault("split_metadata_path", str((run_dir / "split_metadata.parquet").resolve()))
+        output_cfg.setdefault("errors_csv_path", str((run_dir / "errors.csv").resolve()))
+        output_cfg.setdefault("run_manifest_path", str((run_dir / "run_manifest.json").resolve()))
+        output_cfg.setdefault("config_snapshot_path", str((run_dir / "config_snapshot.yaml").resolve()))
+        output_cfg.setdefault("predictions_path", str((run_dir / "predictions.parquet").resolve()))
+        output_cfg.setdefault("task_audit_path", str((run_dir / "task_audit.parquet").resolve()))
+        output_cfg.setdefault("fold_metrics_path", str((run_dir / "metrics_long.parquet").resolve()))
+        output_cfg.setdefault("raw_predictions_path", str((run_dir / "predictions.parquet").resolve()))
+        output_cfg.setdefault(
+            "excel_report_path",
+            str((report_dir / f"forecasting_benchmark_{run_id_cfg}.xlsx").resolve()),
+        )
     output_cfg.setdefault("raw_predictions_path", str((forecasting_dir / "raw_predictions_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("fold_metrics_path", str((forecasting_dir / "fold_metrics_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("series_metrics_path", str((forecasting_dir / "series_metrics_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("task_audit_path", str((forecasting_dir / "task_audit_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("excel_report_path", str((reports_dir / "forecasting_smoke_summary_v1.xlsx").resolve()))
     for key in [
+        "output_dir",
+        "report_dir",
         "raw_predictions_path",
         "fold_metrics_path",
         "series_metrics_path",
         "task_audit_path",
         "excel_report_path",
+        "metrics_long_path",
+        "metrics_long_csv_path",
+        "split_metadata_path",
+        "errors_csv_path",
+        "run_manifest_path",
+        "config_snapshot_path",
+        "predictions_path",
     ]:
         value = output_cfg.get(key)
         if not value:
@@ -527,6 +561,13 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "timeouts",
             {"max_train_seconds_per_task": 60, "max_predict_seconds_per_task": 15},
         ),
+        "device": stage_cfg.get("device", "cpu"),
+        "random_seed": int(stage_cfg.get("random_seed", stage_cfg.get("training", {}).get("seed", 42))),
+        "resume": bool(stage_cfg.get("resume", stage_cfg.get("filters", {}).get("resume_failed_only", False))),
+        "save_metrics": bool(stage_cfg.get("save_metrics", True)),
+        "save_predictions": bool(stage_cfg.get("save_predictions", True)),
+        "progress_every_n": int(stage_cfg.get("progress_every_n", 1)),
+        "dataset_version": str(stage_cfg.get("dataset_version", "")),
         "training": stage_cfg.get(
             "training",
             {"max_epochs": 20, "early_stopping_patience": 5, "batch_size": 64, "learning_rate": 1e-3},

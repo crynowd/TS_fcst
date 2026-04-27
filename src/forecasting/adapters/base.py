@@ -19,6 +19,7 @@ class FitContext:
     early_stopping_patience: int = 5
     batch_size: int = 64
     learning_rate: float = 1e-3
+    weight_decay: float = 0.0
     verbose: bool = False
 
 

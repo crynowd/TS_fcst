@@ -62,9 +62,15 @@ def select_series(
     ]
 
 
-def build_series_lookup(log_returns_df: pd.DataFrame, selected: list[SelectedSeries]) -> dict[str, pd.DataFrame]:
+def build_series_lookup(
+    log_returns_df: pd.DataFrame,
+    selected: list[SelectedSeries],
+    dataset_profile: str | None = None,
+) -> dict[str, pd.DataFrame]:
     selected_ids = {s.series_id for s in selected}
     subset = log_returns_df[log_returns_df["series_id"].isin(selected_ids)].copy()
+    if dataset_profile:
+        subset = subset[subset["dataset_profile"] == dataset_profile].copy()
     grouped: dict[str, pd.DataFrame] = {}
     for sid, sdf in subset.groupby("series_id", sort=False):
         grouped[str(sid)] = sdf.sort_values("date", kind="stable").reset_index(drop=True)

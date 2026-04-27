@@ -13,6 +13,10 @@ class SupervisedWindowData:
     X: np.ndarray
     y: np.ndarray
     timestamps: np.ndarray
+    feature_start_idx: np.ndarray
+    feature_end_idx: np.ndarray
+    target_start_idx: np.ndarray
+    target_end_idx: np.ndarray
 
 
 @dataclass
@@ -43,6 +47,10 @@ def build_supervised_windows(
             X=np.empty((0, window_size), dtype=np.float64),
             y=np.empty((0,), dtype=np.float64),
             timestamps=np.empty((0,), dtype="datetime64[ns]"),
+            feature_start_idx=np.empty((0,), dtype=np.int64),
+            feature_end_idx=np.empty((0,), dtype=np.int64),
+            target_start_idx=np.empty((0,), dtype=np.int64),
+            target_end_idx=np.empty((0,), dtype=np.int64),
         )
 
     t_arr = np.arange(start_t, end_t + 1, dtype=np.int64)
@@ -55,7 +63,25 @@ def build_supervised_windows(
 
     timestamps = dates[t_arr]
 
-    return SupervisedWindowData(X=X, y=y, timestamps=timestamps)
+    feature_start_idx = t_arr - window_size + 1
+    feature_end_idx = t_arr.copy()
+    target_start_idx = t_arr + 1
+    target_end_idx = t_arr + horizon
+
+    if not np.all(feature_end_idx < target_start_idx):
+        raise AssertionError("supervised windows leak target observations into features")
+    if not np.all(target_end_idx < len(returns)):
+        raise AssertionError("target window exceeds available series history")
+
+    return SupervisedWindowData(
+        X=X,
+        y=y,
+        timestamps=timestamps,
+        feature_start_idx=feature_start_idx.astype(np.int64),
+        feature_end_idx=feature_end_idx.astype(np.int64),
+        target_start_idx=target_start_idx.astype(np.int64),
+        target_end_idx=target_end_idx.astype(np.int64),
+    )
 
 
 def build_rolling_origin_folds(n_samples: int, n_folds: int) -> list[FoldSlice]:
@@ -77,5 +103,9 @@ def build_rolling_origin_folds(n_samples: int, n_folds: int) -> list[FoldSlice]:
             continue
         train_idx = np.arange(0, train_end, dtype=np.int64)
         test_idx = np.arange(train_end, test_end, dtype=np.int64)
+        if len(np.intersect1d(train_idx, test_idx)) > 0:
+            raise AssertionError("rolling-origin fold has overlapping train/test indices")
+        if train_idx.size and test_idx.size and train_idx.max() >= test_idx.min():
+            raise AssertionError("rolling-origin fold is not time ordered")
         folds.append(FoldSlice(fold_id=fold_id, train_idx=train_idx, test_idx=test_idx))
     return folds

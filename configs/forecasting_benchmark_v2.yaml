@@ -1,0 +1,111 @@
+stage: forecasting_benchmark_v2
+random_seed: 2026
+dataset_version: log_returns_v1
+device: auto
+resume: true
+save_metrics: true
+save_predictions: true
+progress_every_n: 5
+
+data:
+  source_path: artifacts/processed/log_returns_v1.parquet
+  dataset_profile: core_balanced
+  max_series: 110
+  dataset_limit: 110
+  series_selection_mode: first_n
+  series_ids: []
+
+models:
+  active:
+    - naive_zero
+    - naive_mean
+    - ridge_lag
+  inactive_but_supported: []
+
+selected_architectures:
+  source_config: configs/forecasting_selected_architectures_v1.yaml
+  baselines_keep:
+    - naive_zero
+    - naive_mean
+    - ridge_lag
+  candidate_ids:
+    - esn_g004
+    - chaotic_esn_g003
+    - transient_chaotic_esn_g002
+    - vanilla_mlp_g004
+    - chaotic_mlp_g003
+    - logistic_g006
+    - lstm_g001
+    - chaotic_lstm_g003
+
+horizons:
+  - 1
+  - 5
+  - 20
+
+window_sizes:
+  "1": 64
+  "5": 32
+  "20": 16
+
+validation:
+  method: rolling_origin
+  n_folds: 3
+
+timeouts:
+  max_train_seconds_per_task: 300
+  max_predict_seconds_per_task: 30
+
+training:
+  max_epochs: 20
+  early_stopping_patience: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0
+  by_model:
+    vanilla_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_logistic_net:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+
+model_overrides:
+  ridge_lag:
+    alpha: 1.0
+
+filters:
+  active_models: []
+  horizons: []
+  series_ids: []
+  resume_failed_only: false
+
+outputs:
+  run_name: forecasting_benchmark_v2
+  run_id: forecasting_benchmark_v2
+  output_dir: artifacts/forecasting/forecasting_benchmark_v2
+  report_dir: artifacts/reports/forecasting_audit_v2

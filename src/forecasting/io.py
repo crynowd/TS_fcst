@@ -51,6 +51,7 @@ FOLD_METRICS_COLUMNS = [
 
 TASK_AUDIT_COLUMNS = [
     "task_id",
+    "config_hash",
     "run_id",
     "model_name",
     "series_id",
@@ -63,6 +64,23 @@ TASK_AUDIT_COLUMNS = [
     "fit_seconds",
     "predict_seconds",
     "notes",
+    "requested_device",
+    "resolved_device",
+]
+
+SPLIT_METADATA_COLUMNS = [
+    "run_id",
+    "series_id",
+    "ticker",
+    "market",
+    "fold_id",
+    "horizon",
+    "train_start",
+    "train_end",
+    "test_start",
+    "test_end",
+    "n_train",
+    "n_test",
 ]
 
 
@@ -133,4 +151,17 @@ def export_forecasting_summary_excel(
         fold_metrics_df.to_excel(writer, sheet_name="fold_metrics_full", index=False)
         series_metrics_df.to_excel(writer, sheet_name="series_metrics_full", index=False)
         readme_df.to_excel(writer, sheet_name="readme", index=False)
+    return out
+
+
+def export_forecasting_benchmark_v2_excel(
+    excel_path: str | Path,
+    sheets: dict[str, pd.DataFrame],
+) -> Path:
+    out = Path(excel_path).resolve()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out) as writer:
+        for sheet_name, df in sheets.items():
+            safe_name = sheet_name[:31]
+            df.to_excel(writer, sheet_name=safe_name, index=False)
     return out
