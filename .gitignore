@@ -32,6 +32,13 @@ artifacts/forecasting/**/*.yaml
 artifacts/forecasting/**/predictions*
 artifacts/forecasting/**/temp/
 artifacts/meta_modeling/*.csv
+artifacts/meta_modeling/*.json
+artifacts/meta_modeling/*.parquet
+artifacts/meta_modeling/*.xlsx
+artifacts/meta_modeling/**/*.csv
+artifacts/meta_modeling/**/*.json
+artifacts/meta_modeling/**/*.parquet
+artifacts/meta_modeling/**/*.xlsx
 artifacts/reports/**/*.json
 artifacts/reports/**/*.csv
 artifacts/reports/**/*.parquet
