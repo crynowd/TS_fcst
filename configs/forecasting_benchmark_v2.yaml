@@ -5,13 +5,13 @@ device: auto
 resume: true
 save_metrics: true
 save_predictions: true
-progress_every_n: 5
+progress_every_n: 20
 
 data:
   source_path: artifacts/processed/log_returns_v1.parquet
   dataset_profile: core_balanced
-  max_series: 110
-  dataset_limit: 110
+  max_series: 418
+  dataset_limit: 418
   series_selection_mode: first_n
   series_ids: []
 
