@@ -467,6 +467,7 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
     artifacts_cfg = dict(paths_cfg.get("artifacts", {}))
     if "forecasting" not in artifacts_cfg:
         artifacts_cfg["forecasting"] = str((project_root / "artifacts" / "forecasting").resolve())
+    artifacts_cfg.setdefault("reports", str((project_root / "artifacts" / "reports").resolve()))
 
     data_cfg = dict(stage_cfg.get("data", {}))
     source_path = Path(str(data_cfg.get("source_path", "artifacts/processed/log_returns_v1.parquet")))
@@ -478,17 +479,50 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
     forecasting_dir = Path(artifacts_cfg["forecasting"]).resolve()
     reports_dir = Path(artifacts_cfg.get("reports", project_root / "artifacts" / "reports")).resolve()
     output_cfg.setdefault("run_name", "forecasting_benchmark_smoke_v1")
+    run_id_cfg = str(output_cfg.get("run_id", "")).strip()
+    if run_id_cfg:
+        run_dir = Path(str(output_cfg.get("output_dir", forecasting_dir / run_id_cfg)))
+        if not run_dir.is_absolute():
+            run_dir = (project_root / run_dir).resolve()
+        output_cfg["output_dir"] = str(run_dir.resolve())
+        report_dir = Path(str(output_cfg.get("report_dir", reports_dir / "forecasting_audit_v2")))
+        if not report_dir.is_absolute():
+            report_dir = (project_root / report_dir).resolve()
+        output_cfg["report_dir"] = str(report_dir.resolve())
+        output_cfg.setdefault("metrics_long_path", str((run_dir / "metrics_long.parquet").resolve()))
+        output_cfg.setdefault("metrics_long_csv_path", str((run_dir / "metrics_long.csv").resolve()))
+        output_cfg.setdefault("split_metadata_path", str((run_dir / "split_metadata.parquet").resolve()))
+        output_cfg.setdefault("errors_csv_path", str((run_dir / "errors.csv").resolve()))
+        output_cfg.setdefault("run_manifest_path", str((run_dir / "run_manifest.json").resolve()))
+        output_cfg.setdefault("config_snapshot_path", str((run_dir / "config_snapshot.yaml").resolve()))
+        output_cfg.setdefault("predictions_path", str((run_dir / "predictions.parquet").resolve()))
+        output_cfg.setdefault("task_audit_path", str((run_dir / "task_audit.parquet").resolve()))
+        output_cfg.setdefault("fold_metrics_path", str((run_dir / "metrics_long.parquet").resolve()))
+        output_cfg.setdefault("raw_predictions_path", str((run_dir / "predictions.parquet").resolve()))
+        output_cfg.setdefault(
+            "excel_report_path",
+            str((report_dir / f"forecasting_benchmark_{run_id_cfg}.xlsx").resolve()),
+        )
     output_cfg.setdefault("raw_predictions_path", str((forecasting_dir / "raw_predictions_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("fold_metrics_path", str((forecasting_dir / "fold_metrics_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("series_metrics_path", str((forecasting_dir / "series_metrics_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("task_audit_path", str((forecasting_dir / "task_audit_smoke_v1.parquet").resolve()))
     output_cfg.setdefault("excel_report_path", str((reports_dir / "forecasting_smoke_summary_v1.xlsx").resolve()))
     for key in [
+        "output_dir",
+        "report_dir",
         "raw_predictions_path",
         "fold_metrics_path",
         "series_metrics_path",
         "task_audit_path",
         "excel_report_path",
+        "metrics_long_path",
+        "metrics_long_csv_path",
+        "split_metadata_path",
+        "errors_csv_path",
+        "run_manifest_path",
+        "config_snapshot_path",
+        "predictions_path",
     ]:
         value = output_cfg.get(key)
         if not value:
@@ -527,6 +561,13 @@ def load_forecasting_benchmark_config(config_path: str) -> Dict[str, Any]:
             "timeouts",
             {"max_train_seconds_per_task": 60, "max_predict_seconds_per_task": 15},
         ),
+        "device": stage_cfg.get("device", "cpu"),
+        "random_seed": int(stage_cfg.get("random_seed", stage_cfg.get("training", {}).get("seed", 42))),
+        "resume": bool(stage_cfg.get("resume", stage_cfg.get("filters", {}).get("resume_failed_only", False))),
+        "save_metrics": bool(stage_cfg.get("save_metrics", True)),
+        "save_predictions": bool(stage_cfg.get("save_predictions", True)),
+        "progress_every_n": int(stage_cfg.get("progress_every_n", 1)),
+        "dataset_version": str(stage_cfg.get("dataset_version", "")),
         "training": stage_cfg.get(
             "training",
             {"max_epochs": 20, "early_stopping_patience": 5, "batch_size": 64, "learning_rate": 1e-3},
@@ -865,6 +906,10 @@ def load_meta_modeling_config(config_path: str) -> Dict[str, Any]:
         return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
 
     inputs_cfg = dict(stage_cfg.get("inputs", {}))
+    if "metrics_path" in stage_cfg and "metrics_path" not in inputs_cfg:
+        inputs_cfg["metrics_path"] = stage_cfg.get("metrics_path")
+    if "features_path" in stage_cfg and "features_path" not in inputs_cfg:
+        inputs_cfg["features_path"] = stage_cfg.get("features_path")
     for key, value in list(inputs_cfg.items()):
         if key.endswith("_path") and value:
             inputs_cfg[key] = _resolve_path(str(value))
@@ -965,6 +1010,10 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
         return str((project_root / p).resolve()) if not p.is_absolute() else str(p.resolve())
 
     inputs_cfg = dict(stage_cfg.get("inputs", {}))
+    if "metrics_path" in stage_cfg and "metrics_path" not in inputs_cfg:
+        inputs_cfg["metrics_path"] = stage_cfg.get("metrics_path")
+    if "features_path" in stage_cfg and "features_path" not in inputs_cfg:
+        inputs_cfg["features_path"] = stage_cfg.get("features_path")
     for key, value in list(inputs_cfg.items()):
         if key.endswith("_path") and value:
             inputs_cfg[key] = _resolve_path(str(value))
@@ -1010,6 +1059,14 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
     merged: Dict[str, Any] = {
         "run_name": stage_cfg.get("run_name", "meta_modeling_experiments_v1"),
         "stage": stage_cfg.get("stage", "meta_modeling_experiments"),
+        "feature_scope": stage_cfg.get("feature_scope", ""),
+        "expected_n_folds": int(stage_cfg.get("expected_n_folds", 3)),
+        "horizons": stage_cfg.get("horizons", stage_cfg.get("target_horizons", [1, 5, 20])),
+        "metrics": stage_cfg.get("metrics", stage_cfg.get("target_metrics", ["rmse", "directional_accuracy"])),
+        "random_seed": int(stage_cfg.get("random_seed", stage_cfg.get("split", {}).get("random_seed", 42))),
+        "n_repeats": int(stage_cfg.get("n_repeats", stage_cfg.get("split", {}).get("n_repeats", 5))),
+        "output_dir": _resolve_path(str(stage_cfg.get("output_dir", artifacts_cfg["meta_modeling"]))),
+        "report_dir": _resolve_path(str(stage_cfg.get("report_dir", Path(artifacts_cfg["reports"]) / "forecasting_audit_v2"))),
         "inputs": inputs_cfg,
         "dataset_filter": stage_cfg.get("dataset_filter", ""),
         "join_keys": stage_cfg.get("join_keys", ["series_id", "ticker"]),
@@ -1026,7 +1083,9 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
         "feature_pruning": stage_cfg.get("feature_pruning", {"corr_threshold": 0.90}),
         "candidate_selection": stage_cfg.get("candidate_selection", {"top_k_values": [3, 4, 5, 6], "closeness_tolerance": 0.05}),
         "balancing_modes": stage_cfg.get("balancing_modes", ["default", "balanced"]),
+        "decision_rules": stage_cfg.get("decision_rules", ["top_1", "confidence_fallback"]),
         "confidence_thresholds": stage_cfg.get("confidence_thresholds", [0.5, 0.6, 0.7, 0.8]),
+        "feature_sets": stage_cfg.get("feature_sets", ["full"]),
         "feature_selection": stage_cfg.get("feature_selection", {"method": "mutual_info", "top_n": 30, "min_features": 5}),
         "basic_features": stage_cfg.get("basic_features", {"enabled": True, "rolling_window": 20}),
         "auto_select_latest_forecasting": bool(stage_cfg.get("auto_select_latest_forecasting", True)),
@@ -1051,6 +1110,8 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
     }
 
     required_inputs = ["features_path", "forecasting_series_metrics_path"]
+    if str(merged.get("feature_scope", "")).strip() == "fold_aware_train_only":
+        required_inputs = ["features_path", "metrics_path"]
     missing_inputs = [k for k in required_inputs if not str(merged["inputs"].get(k, "")).strip()]
     if missing_inputs:
         raise ConfigError(f"Missing experimental meta-modeling inputs: {', '.join(missing_inputs)}")

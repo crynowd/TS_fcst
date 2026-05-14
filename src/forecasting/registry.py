@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any, Callable
 
+import torch
+
 from src.forecasting.adapters import (
     ChaoticESNAdapter,
     ChaoticLSTMForecastAdapter,
@@ -37,10 +39,29 @@ def _pop_runtime_keys(overrides: dict[str, Any]) -> dict[str, Any]:
         "early_stopping_patience",
         "batch_size",
         "learning_rate",
+        "weight_decay",
         "enabled",
         "run",
     }
     return {k: v for k, v in overrides.items() if k not in drop_keys}
+
+
+def resolve_torch_device(requested_device: str | None) -> dict[str, Any]:
+    requested = str(requested_device or "cpu").lower()
+    cuda_available = bool(torch.cuda.is_available())
+    gpu_name = torch.cuda.get_device_name(0) if cuda_available else ""
+    if requested == "auto":
+        resolved = "cuda" if cuda_available else "cpu"
+    elif requested.startswith("cuda") and not cuda_available:
+        resolved = "cpu"
+    else:
+        resolved = requested
+    return {
+        "requested_device": requested,
+        "resolved_device": resolved,
+        "cuda_available": cuda_available,
+        "gpu_name": gpu_name,
+    }
 
 
 def get_model_specs() -> dict[str, ModelSpec]:
@@ -144,7 +165,8 @@ def build_model(model_name: str, config: dict[str, Any], logger: Any | None = No
     model_cfg = dict(config.get("model_overrides", {}).get(model_name, {}))
     clean_cfg = _pop_runtime_keys(model_cfg)
     if specs[model_name].family == "torch":
-        clean_cfg.setdefault("device", str(config.get("device", "cpu")))
+        device_info = resolve_torch_device(str(config.get("device", "cpu")))
+        clean_cfg.setdefault("device", device_info["resolved_device"])
         clean_cfg.setdefault("logger", logger)
     return specs[model_name].factory(clean_cfg)
 

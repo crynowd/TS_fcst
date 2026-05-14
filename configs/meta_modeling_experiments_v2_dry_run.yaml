@@ -1,0 +1,58 @@
+run_name: meta_modeling_experiments_v2_dry_run
+stage: meta_modeling_experiments_v2
+
+metrics_path: artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet
+features_path: artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet
+feature_scope: fold_aware_train_only
+join_keys: [series_id, horizon, fold_id]
+auto_select_latest_forecasting: false
+expected_n_folds: 3
+
+horizons: [1]
+metrics: [directional_accuracy]
+target_metrics: [directional_accuracy]
+
+methods: [classification]
+classification_models:
+  - logistic_regression
+  - random_forest_classifier
+  - catboost_classifier
+
+model_overrides:
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+  random_forest_classifier:
+    n_estimators: 200
+    max_depth: 8
+    min_samples_leaf: 3
+    n_jobs: -1
+  catboost_classifier:
+    iterations: 300
+    depth: 5
+    learning_rate: 0.05
+    l2_leaf_reg: 3.0
+    random_seed: 42
+    verbose: false
+
+feature_sets: [full]
+candidate_selection:
+  top_k_values: [3]
+  closeness_tolerance: 0.05
+
+balancing_modes: [default]
+decision_rules: [top_1]
+confidence_thresholds: []
+
+random_seed: 42
+n_repeats: 1
+split:
+  test_size: 0.2
+  validation_size: 0.1
+  random_seed: 42
+  n_repeats: 1
+  random_seeds: []
+
+output_dir: artifacts/meta_modeling
+report_dir: artifacts/reports/forecasting_audit_v2
+outputs: {}

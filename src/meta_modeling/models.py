@@ -71,6 +71,8 @@ class CatBoostClassifierWrapper:
         iterations: int = 300,
         depth: int = 6,
         learning_rate: float = 0.05,
+        l2_leaf_reg: float = 3.0,
+        verbose: bool = False,
         auto_class_weights: str | None = None,
         train_dir: str | None = None,
     ) -> None:
@@ -78,6 +80,8 @@ class CatBoostClassifierWrapper:
         self.iterations = int(iterations)
         self.depth = int(depth)
         self.learning_rate = float(learning_rate)
+        self.l2_leaf_reg = float(l2_leaf_reg)
+        self.verbose = bool(verbose)
         self.auto_class_weights = str(auto_class_weights) if auto_class_weights else None
         self.train_dir = str(train_dir) if train_dir else None
         self._model: Any | None = None
@@ -93,7 +97,8 @@ class CatBoostClassifierWrapper:
             "iterations": self.iterations,
             "depth": self.depth,
             "learning_rate": self.learning_rate,
-            "verbose": False,
+            "l2_leaf_reg": self.l2_leaf_reg,
+            "verbose": self.verbose,
         }
         if self.auto_class_weights:
             model_kwargs["auto_class_weights"] = self.auto_class_weights
@@ -255,10 +260,12 @@ def build_meta_classifier(
         max_depth = model_overrides.get("max_depth", None)
         if max_depth is not None:
             max_depth = int(max_depth)
+        min_samples_leaf = int(model_overrides.get("min_samples_leaf", 1))
         class_weight = "balanced" if str(balancing_mode).lower() == "balanced" else None
         return RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
             random_state=random_seed,
             n_jobs=int(model_overrides.get("n_jobs", -1)),
             class_weight=class_weight,
@@ -266,11 +273,14 @@ def build_meta_classifier(
 
     if model_name == "catboost_classifier":
         auto_class_weights = "Balanced" if str(balancing_mode).lower() == "balanced" else None
+        catboost_seed = int(model_overrides.get("random_seed", random_seed))
         return CatBoostClassifierWrapper(
-            random_seed=random_seed,
+            random_seed=catboost_seed,
             iterations=int(model_overrides.get("iterations", 300)),
             depth=int(model_overrides.get("depth", 6)),
             learning_rate=float(model_overrides.get("learning_rate", 0.05)),
+            l2_leaf_reg=float(model_overrides.get("l2_leaf_reg", 3.0)),
+            verbose=bool(model_overrides.get("verbose", False)),
             auto_class_weights=auto_class_weights,
             train_dir=catboost_train_dir,
         )

@@ -23,7 +23,9 @@ def main() -> None:
     cfg = load_forecasting_benchmark_config(args.config)
 
     run_name = str(cfg.get("outputs", {}).get("run_name", "forecasting_benchmark_smoke_v1"))
-    run_id = f"{run_name}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    run_id = str(cfg.get("outputs", {}).get("run_id", "")).strip()
+    if not run_id:
+        run_id = f"{run_name}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     logger, log_path = setup_logger(run_id=run_id, logs_dir=cfg["artifacts"]["logs"])
     cfg["meta"]["run_id"] = run_id
     cfg["meta"]["log_path"] = str(log_path)

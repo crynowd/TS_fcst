@@ -44,6 +44,7 @@ class TorchRegressorAdapter(ForecastModelAdapter):
         self.logger = logger
         self.epoch_log_interval = epoch_log_interval
         self.model: nn.Module | None = None
+        self._last_training_diagnostics: dict[str, Any] = {}
 
     def _prepare_input(self, X: np.ndarray) -> torch.Tensor:
         if self.input_mode == "flat":
@@ -78,14 +79,23 @@ class TorchRegressorAdapter(ForecastModelAdapter):
         val_y_tensor = torch.from_numpy(y_val.astype(np.float32)).unsqueeze(-1) if y_val is not None else None
 
         criterion = nn.MSELoss()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=float(ctx.learning_rate))
+        optimizer = torch.optim.Adam(
+            self.model.parameters(),
+            lr=float(ctx.learning_rate),
+            weight_decay=float(ctx.weight_decay),
+        )
 
         best_state: dict[str, torch.Tensor] | None = None
         best_val = float("inf")
         patience_left = int(ctx.early_stopping_patience)
         t0 = time.monotonic()
+        train_loss_history: list[float] = []
+        val_loss_history: list[float | None] = []
+        epochs_completed = 0
+        early_stopping_reason = "max_epochs_reached"
 
         for epoch in range(1, int(ctx.max_epochs) + 1):
+            epochs_completed = epoch
             self.model.train()
             running = 0.0
             seen = 0
@@ -102,6 +112,7 @@ class TorchRegressorAdapter(ForecastModelAdapter):
 
             train_loss = running / max(1, seen)
             val_loss = float("nan")
+            train_loss_history.append(float(train_loss))
 
             if val_X_tensor is not None and val_y_tensor is not None:
                 self.model.eval()
@@ -117,6 +128,9 @@ class TorchRegressorAdapter(ForecastModelAdapter):
                     patience_left = int(ctx.early_stopping_patience)
                 else:
                     patience_left -= 1
+                val_loss_history.append(float(val_loss))
+            else:
+                val_loss_history.append(None)
 
             if self.logger is not None and (epoch == 1 or epoch % self.epoch_log_interval == 0):
                 self.logger.info(
@@ -131,9 +145,24 @@ class TorchRegressorAdapter(ForecastModelAdapter):
 
             elapsed = time.monotonic() - t0
             if ctx.max_train_seconds is not None and elapsed > float(ctx.max_train_seconds):
+                self._last_training_diagnostics = {
+                    "epochs_completed": int(epochs_completed),
+                    "train_loss_history": train_loss_history,
+                    "val_loss_history": val_loss_history,
+                    "early_stopping_reason": "timeout",
+                    "best_val_loss": float(best_val) if np.isfinite(best_val) else None,
+                    "final_train_loss": float(train_loss_history[-1]) if train_loss_history else None,
+                    "final_val_loss": val_loss_history[-1] if val_loss_history else None,
+                    "batch_size": int(batch_size),
+                    "learning_rate": float(ctx.learning_rate),
+                    "weight_decay": float(ctx.weight_decay),
+                    "shuffle": True,
+                    "device": self.device,
+                }
                 raise TaskTimeoutError(f"Training timeout after {elapsed:.2f}s")
 
             if val_X_tensor is not None and val_y_tensor is not None and patience_left <= 0:
+                early_stopping_reason = "patience_exhausted"
                 if self.logger is not None:
                     self.logger.info(
                         "early_stopping model=%s epoch=%d best_val_loss=%.6f",
@@ -145,6 +174,20 @@ class TorchRegressorAdapter(ForecastModelAdapter):
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
+        self._last_training_diagnostics = {
+            "epochs_completed": int(epochs_completed),
+            "train_loss_history": train_loss_history,
+            "val_loss_history": val_loss_history,
+            "early_stopping_reason": early_stopping_reason,
+            "best_val_loss": float(best_val) if np.isfinite(best_val) else None,
+            "final_train_loss": float(train_loss_history[-1]) if train_loss_history else None,
+            "final_val_loss": val_loss_history[-1] if val_loss_history else None,
+            "batch_size": int(batch_size),
+            "learning_rate": float(ctx.learning_rate),
+            "weight_decay": float(ctx.weight_decay),
+            "shuffle": True,
+            "device": self.device,
+        }
 
     def predict(self, X: np.ndarray, context: FitContext | None = None) -> np.ndarray:
         ctx = context or FitContext()
@@ -169,6 +212,9 @@ class TorchRegressorAdapter(ForecastModelAdapter):
             "seed": self.seed,
             "device": self.device,
         }
+
+    def get_training_diagnostics(self) -> dict[str, Any]:
+        return dict(self._last_training_diagnostics)
 
 
 class VanillaMLPAdapter(TorchRegressorAdapter):

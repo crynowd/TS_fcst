@@ -1,0 +1,131 @@
+run_name: meta_modeling_experiments_v2_dry_run
+stage: meta_modeling_experiments_v2
+feature_scope: fold_aware_train_only
+expected_n_folds: 3
+horizons:
+- 1
+metrics:
+- directional_accuracy
+random_seed: 42
+n_repeats: 1
+output_dir: D:\Projects\TS_fcst\artifacts\meta_modeling
+report_dir: D:\Projects\TS_fcst\artifacts\reports\forecasting_audit_v2
+inputs:
+  metrics_path: D:\Projects\TS_fcst\artifacts\forecasting\forecasting_benchmark_v2\metrics_long.parquet
+  features_path: D:\Projects\TS_fcst\artifacts\features\fold_aware_features_v2\final_train_only_features_by_fold.parquet
+dataset_filter: ''
+join_keys:
+- series_id
+- horizon
+- fold_id
+target_metrics:
+- directional_accuracy
+metric_columns: {}
+methods:
+- classification
+meta_models:
+- ridge
+- random_forest
+- catboost
+classification_models:
+- logistic_regression
+- random_forest_classifier
+- catboost_classifier
+scoring_models:
+- ridge
+- random_forest
+- catboost
+model_overrides:
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+  random_forest_classifier:
+    n_estimators: 200
+    max_depth: 8
+    min_samples_leaf: 3
+    n_jobs: -1
+  catboost_classifier:
+    iterations: 300
+    depth: 5
+    learning_rate: 0.05
+    l2_leaf_reg: 3.0
+    random_seed: 42
+    verbose: false
+feature_pruning:
+  corr_threshold: 0.9
+candidate_selection:
+  top_k_values:
+  - 3
+  closeness_tolerance: 0.05
+balancing_modes:
+- default
+decision_rules:
+- top_1
+confidence_thresholds: []
+feature_sets:
+- full
+feature_selection:
+  method: mutual_info
+  top_n: 30
+  min_features: 5
+basic_features:
+  enabled: true
+  rolling_window: 20
+auto_select_latest_forecasting: false
+split:
+  test_size: 0.2
+  validation_size: 0.1
+  random_seed: 42
+  n_repeats: 1
+  random_seeds: []
+prediction_examples_per_task: 5
+outputs: &id001
+  meta_dataset_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\meta_dataset_summary_v2.csv
+  meta_dataset_summary_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\meta_dataset_summary_v2.parquet
+  model_order_mapping_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\model_order_mapping_v2.csv
+  routing_rows_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\routing_rows_v2.parquet
+  routing_rows_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\routing_rows_v2.csv
+  task_results_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\task_results_v2.parquet
+  task_results_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\task_results_v2.csv
+  split_assignments_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\split_assignments_v2.csv
+  repeat_aggregated_results_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\repeat_aggregated_results_v2.csv
+  best_single_baseline_by_repeat_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\best_single_baseline_by_repeat_v2.csv
+  feature_list_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\feature_list_v2.csv
+  feature_manifest_json_path: D:\Projects\TS_fcst\artifacts\meta_modeling\feature_manifest_v2.json
+  comparison_table_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\comparison_table_v2.csv
+  candidate_models_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\candidate_models_v2.csv
+  classification_probabilities_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\classification_probabilities_v2.csv
+  per_class_metrics_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\per_class_metrics_v2.csv
+  confusion_matrix_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\confusion_matrix_v2.csv
+  class_distribution_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\class_distribution_v2.csv
+  confidence_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\confidence_summary_v2.csv
+  selected_features_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\selected_features_v2.csv
+  candidate_filtering_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\candidate_filtering_summary_v2.csv
+  feature_regime_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\feature_regime_summary_v2.csv
+  best_config_per_task_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\best_config_per_task_v2.csv
+  confident_examples_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\confident_examples_v2.csv
+  coverage_checks_json_path: D:\Projects\TS_fcst\artifacts\reports\forecasting_audit_v2\metamodeling_v2_coverage_checks.json
+  resolved_config_snapshot_path: D:\Projects\TS_fcst\artifacts\reports\forecasting_audit_v2\meta_modeling_experiments_v2_dry_run_resolved_config_snapshot.yaml
+  excel_report_path: D:\Projects\TS_fcst\artifacts\reports\forecasting_audit_v2\meta_modeling_experiments_v2.xlsx
+artifacts:
+  interim: D:/Projects/TS_fcst/artifacts/interim
+  processed: D:/Projects/TS_fcst/artifacts/processed
+  features: D:/Projects/TS_fcst/artifacts/features
+  reports: D:/Projects/TS_fcst/artifacts/reports
+  logs: D:/Projects/TS_fcst/artifacts/logs
+  manifests: D:/Projects/TS_fcst/artifacts/manifests
+  meta_modeling: D:\Projects\TS_fcst\artifacts\meta_modeling
+meta:
+  config_path: D:\Projects\TS_fcst\configs\meta_modeling_experiments_v2_dry_run.yaml
+  paths_config_path: D:\Projects\TS_fcst\configs\paths.local.yaml
+  project_root: D:\Projects\TS_fcst
+  config_hash: e3977fdacf909d981844c0ce69d5ffea35d55ad34a13bf02cc60f62c8a1e85be
+  run_id: meta_modeling_experiments_v2_dry_run_20260427T142557Z
+  log_path: D:\Projects\TS_fcst\artifacts\logs\meta_modeling_experiments_v2_dry_run_20260427T142557Z.log
+resolved_run_id: meta_modeling_experiments_v2_dry_run_20260427T142557Z
+resolved_timestamp_utc: '2026-04-27T14:25:57.220382+00:00'
+resolved_git_commit: b8a26e3e007c7fda078daa9b59157a4e04bccb90
+resolved_inputs:
+  metrics_path: D:\Projects\TS_fcst\artifacts\forecasting\forecasting_benchmark_v2\metrics_long.parquet
+  features_path: D:\Projects\TS_fcst\artifacts\features\fold_aware_features_v2\final_train_only_features_by_fold.parquet
+resolved_outputs: *id001
