@@ -56,17 +56,7 @@ python -m src.cli.run_feature_consolidation --config configs/feature_consolidati
 
 ---
 
-**4. Кластеризация**
-
-```bash
-python -m src.cli.run_clustering_experiments --config configs/clustering_experiments_v1.yaml
-```
-
-→ `artifacts/clustering/*.parquet`
-
----
-
-**5. Эксперимент прогнозирования**
+**4. Эксперимент прогнозирования**
 
 ```bash
 python -m src.cli.run_forecasting_benchmark --config configs/forecasting_benchmark_smoke_v1.yaml
@@ -76,7 +66,7 @@ python -m src.cli.run_forecasting_benchmark --config configs/forecasting_benchma
 
 ---
 
-**6. Подбор архитектур**
+**5. Подбор архитектур**
 
 ```bash
 python -m src.cli.run_architecture_tuning_benchmark --config configs/architecture_tuning_benchmark_v1.yaml
@@ -86,7 +76,7 @@ python -m src.cli.run_architecture_tuning_benchmark --config configs/architectur
 
 ---
 
-**7. Метамоделирование**
+**6. Метамоделирование**
 
 ```bash
 python -m src.cli.run_meta_modeling --config configs/meta_modeling_v1.yaml
@@ -110,9 +100,7 @@ python -m src.cli.run_meta_modeling --config configs/meta_modeling_v1.yaml
 ## Ключевые результаты
 
 * универсальной лучшей модели не существует;
-* ESN показывает лучшие результаты на коротких горизонтах;
 * на длинных горизонтах простые модели могут выигрывать по RMSE;
-* разные метрики приводят к различным выводам;
 * хаотические модели не дают устойчивого преимущества, но полезны в отдельных случаях;
 
 ---
