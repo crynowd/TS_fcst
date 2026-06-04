@@ -72,7 +72,7 @@ log_return
 dataset_profile
 ```
 
-Role: source for selecting the `core_balanced` benchmark profile and for building temporal train/test windows.
+Role: source for selecting the `core_balanced` benchmark profile and for building temporal train/test windows. This processed artifact is tracked for artifact-based validation.
 
 ### `artifacts/processed/series_catalog_v1.parquet`
 
@@ -97,7 +97,7 @@ status
 status_reason
 ```
 
-Role: documents data quality and eligibility before the final benchmark profile is selected.
+Role: documents data quality and eligibility before the final benchmark profile is selected. This processed artifact is tracked for artifact-based validation.
 
 ### `artifacts/processed/dataset_profiles_v1.parquet`
 
@@ -117,7 +117,7 @@ short_series
 status
 ```
 
-Role: confirms the composition and selected lengths for the `core_balanced` profile used in the paper benchmark.
+Role: confirms the composition and selected lengths for the `core_balanced` profile used in the paper benchmark. This processed artifact is tracked for artifact-based validation.
 
 ## Length Policy
 
@@ -159,11 +159,11 @@ Large optional files for full route/prediction archival:
 - `artifacts/meta_modeling/routing_rows_v2.parquet`;
 - `artifacts/reports.zip`.
 
-Tracked in Git in the current environment:
+Processed artifacts tracked in Git in the current environment:
 
 - `artifacts/processed/log_returns_v1.parquet`;
 - `artifacts/processed/series_catalog_v1.parquet`;
-- `artifacts/processed/dataset_profiles_v1.parquet`.
+- `artifacts/processed/dataset_profiles_v1.parquet`;
 - `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`;
 - `artifacts/meta_modeling/feature_list_v2.csv`;
 - `artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet`;

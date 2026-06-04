@@ -37,6 +37,18 @@ catboost
 
 TODO: record the exact Python version, operating system, accelerator/CUDA details if applicable, and runtime infrastructure used for the final reported experiments. These values are not specified by the checked repository files.
 
+## ICDM Checklist Mapping
+
+| ICDM item | Repository evidence | Status | Notes |
+|---|---|---|---|
+| Q4.1 Specification of dependencies | `requirements.txt` | Yes, with limitation | Dependencies are listed, but versions are not pinned. Python version, OS, accelerator/CUDA details, and final runtime infrastructure remain TODO. |
+| Q4.2 Training code | `src/`; `configs/data_inventory_v1.yaml`; `configs/features_block_A_v1.yaml`; `configs/features_block_B_v1.yaml`; `configs/features_block_C_v1.yaml`; `configs/features_block_D_v1.yaml`; `configs/feature_screening_v1.yaml`; `configs/feature_consolidation_v1.yaml`; `configs/forecasting_benchmark_v2.yaml`; `configs/forecasting_selected_architectures_v1.yaml`; `configs/meta_modeling_experiments_v2.yaml`; CLI modules under `src/cli/` | Yes | Full recomputation is heavier than artifact validation and is not required for the lightweight reviewer route. |
+| Q4.3 Evaluation code | `paper_icdm/scripts/check_artifacts.py`; `paper_icdm/scripts/build_paper_tables.py`; `paper_icdm/scripts/build_paper_figures.py` | Yes | These scripts validate existing artifacts and regenerate paper tables/figures without retraining models. |
+| Q4.4 Pre-trained models | Generated results are reproduced from computed metrics/artifacts: `artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet`, `artifacts/meta_modeling/task_results_v2.parquet`, and `artifacts/reports/forecasting_audit_v2/meta_modeling_experiments_v2.xlsx` | Not required / not applicable | No saved neural or metamodel checkpoints are required for table/figure reproduction. Do not claim pretrained models are provided unless checkpoint files are added later. |
+| Q4.5 README contains table of results and precise commands | Root `README.md`; `paper_icdm/README.md`; `paper_icdm/RESULTS_MANIFEST.md`; generated `paper_icdm/tables/`; generated `paper_icdm/figures/` | Yes | The paper entry point gives validation and rebuild commands; the manifest maps each table/figure to sources and generated outputs. |
+| Dataset availability | `paper_icdm/DATA.md`; Kaggle source links; tracked processed artifacts under `artifacts/processed/` and compact v2 result artifacts | Yes, raw data external; processed artifacts included | Raw Kaggle files must be downloaded externally. Processed artifacts support validation of the 418-series `core_balanced` profile. |
+| Runtime/infrastructure | `paper_icdm/ENVIRONMENT_TODO.md`, if present; this document | Partial | Exact Python version, OS, CPU/GPU, and final run times are not documented in repository files and remain TODO. |
+
 ## Reproduction Modes
 
 ### Full Recomputation

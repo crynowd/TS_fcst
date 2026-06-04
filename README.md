@@ -1,8 +1,20 @@
 ## ICDM paper reproducibility
 
-The reproducibility layer for the ICDM paper is documented in [`paper_icdm/`](paper_icdm/README.md). It identifies the configs, processed artifacts, benchmark outputs, and meta-learning results used for the paper.
+For the ICDM paper reproducibility package, start here:
 
-Note: older smoke/demo configs are kept for lightweight checks and are not the main paper benchmark.
+[`paper_icdm/README.md`](paper_icdm/README.md)
+
+This layer identifies the configs, processed data artifacts, benchmark outputs, meta-learning results, generated tables, and generated figures used for the paper.
+
+Quick validation:
+
+```bash
+python paper_icdm/scripts/check_artifacts.py
+python paper_icdm/scripts/build_paper_tables.py
+python paper_icdm/scripts/build_paper_figures.py
+```
+
+The older smoke/demo configs are retained for lightweight development checks and are not the main paper benchmark.
 
 # Моделирование и прогнозирование временных рядов с использованием хаотических нейронных сетей
 
@@ -21,6 +33,12 @@ Note: older smoke/demo configs are kept for lightweight checks and are not the m
 ## Запуск и воспроизведение экспериментов
 
 Установка зависимостей:
+
+### Paper route
+
+The ICDM paper route is documented in [`paper_icdm/README.md`](paper_icdm/README.md). Use that entry point for artifact validation, generated paper tables, and generated paper figures.
+
+### Development smoke/demo path
 
 ```bash
 pip install -r requirements.txt
@@ -67,6 +85,8 @@ python -m src.cli.run_feature_consolidation --config configs/feature_consolidati
 ```bash
 python -m src.cli.run_forecasting_benchmark --config configs/forecasting_benchmark_smoke_v1.yaml
 ```
+
+This command uses `configs/forecasting_benchmark_smoke_v1.yaml`, which is a development smoke/demo configuration. It is not the main paper benchmark; the paper benchmark is `configs/forecasting_benchmark_v2.yaml` and is documented through `paper_icdm/README.md`.
 
 → `artifacts/forecasting/series_metrics_smoke_v1.parquet`
 
