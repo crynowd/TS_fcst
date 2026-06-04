@@ -86,6 +86,14 @@ python paper_icdm/scripts/check_artifacts.py
 
 The checker reads existing files only. It validates processed-data counts and length policy, feature-list and feature-matrix dimensions, forecasting benchmark models/metrics/folds/horizons, meta-learning splits and task outputs, the explicit model-family mapping, paper-output source coverage, and artifact tracking/upload recommendations.
 
+Build compact paper table CSV files from existing artifacts:
+
+```bash
+python paper_icdm/scripts/build_paper_tables.py
+```
+
+The table builder reads existing configs, parquet/csv artifacts, and the meta-modeling Excel report only. It does not rerun forecasting or meta-learning. It writes `paper_icdm/tables/table_i_features.csv`, `table_ii_candidates.csv`, `table_iii_protocol.csv`, `table_iv_direct_forecasting.csv`, `table_v_winner_family_counts.csv`, and `table_vi_meta_selection_results.csv`. If a required source is unavailable, it writes a `*_NEEDS_SOURCE.csv` or debug candidate CSV and prints a warning instead of fabricating values.
+
 ## Expected Validation Checks
 
 `paper_icdm/scripts/check_artifacts.py` verifies:
@@ -120,8 +128,20 @@ The checker reads existing files only. It validates processed-data counts and le
 
 - Kaggle raw data download is external.
 - Dependency versions are not pinned yet.
-- Table builder scripts are not added yet.
+- Table builder output should be regenerated after any source artifact changes with `python paper_icdm/scripts/build_paper_tables.py`.
 - Figure builder scripts are not added yet.
 - Exact runtime and infrastructure values need manual filling.
 - Exact artifact upload strategy needs verification for large optional artifacts. `predictions.parquet`, `routing_rows_v2.parquet`, and `artifacts/reports.zip` are intentionally not committed directly to Git; use Git LFS, GitHub Release assets, or an external archive if they are needed.
-- Stage 3B will add `build_paper_tables.py`.
+
+## Table VI Lineage
+
+Table VI is built from `artifacts/reports/forecasting_audit_v2/meta_modeling_experiments_v2.xlsx`, sheet `summary`. That Excel report is written by `src/reporting/excel_export.py` from the v2 meta-modeling pipeline and includes the lineage sheets `task_results`, `routing_rows`, `model_order_mapping`, `meta_dataset_summary`, `split_assignments`, `repeat_aggregates`, `best_single_repeat`, `comparison`, and `candidates`.
+
+The compact source files tied to that report are:
+
+- `artifacts/meta_modeling/task_results_v2.parquet`;
+- `artifacts/meta_modeling/split_assignments_v2.csv`;
+- `artifacts/meta_modeling/model_order_mapping_v2.csv`;
+- `artifacts/meta_modeling/routing_rows_v2.parquet`, if available locally for route-level inspection.
+
+`routing_rows_v2.parquet` remains an optional large local artifact and is not committed directly.

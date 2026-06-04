@@ -15,6 +15,8 @@ paper_icdm/
   model_family_mapping.csv # explicit broad-family mapping for Table V/Figure 4
   scripts/
     check_artifacts.py   # lightweight artifact validation
+    build_paper_tables.py # reproducible paper table builder
+  tables/                 # generated compact CSV paper tables
 ```
 
 ## Main Paper Path
@@ -86,14 +88,27 @@ The current repository state can support artifact-based validation of:
 - forecasting benchmark summaries;
 - winner counts by model or broad model family using `paper_icdm/model_family_mapping.csv`;
 - meta-learning task results;
-- paper tables and figures after future builder scripts are added.
+- paper tables I-VI through `paper_icdm/scripts/build_paper_tables.py`;
+- paper figures after future builder scripts are added.
 
-Tracked compact v2 artifacts now include the forecasting manifest, split metadata, fold-level metrics, feature list/matrix, meta-learning split assignments, task results, and model-order mapping. The large optional artifacts `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`, `artifacts/meta_modeling/routing_rows_v2.parquet`, and `artifacts/reports.zip` are intentionally not added directly to Git; use Git LFS, GitHub Release assets, or an external archive if they are needed for full route-level inspection.
+Tracked compact v2 artifacts now include the forecasting manifest, split metadata, fold-level metrics, feature list/matrix, meta-learning split assignments, task results, model-order mapping, and the compact paper table CSV outputs. Table VI is built from the Excel report `artifacts/reports/forecasting_audit_v2/meta_modeling_experiments_v2.xlsx`, whose lineage is recorded by the meta-modeling pipeline and resolved config snapshots. The large optional artifacts `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`, `artifacts/meta_modeling/routing_rows_v2.parquet`, and `artifacts/reports.zip` are intentionally not added directly to Git; use Git LFS, GitHub Release assets, or an external archive if they are needed for full route-level inspection.
 
-Future scripts are intentionally not created in this stage:
+Build paper tables from existing artifacts:
 
-- `build_paper_tables.py`: to be added in Stage 3B;
-- `build_paper_figures.py`: to be added later.
+```bash
+python paper_icdm/scripts/build_paper_tables.py
+```
+
+The builder creates:
+
+- `paper_icdm/tables/table_i_features.csv`;
+- `paper_icdm/tables/table_ii_candidates.csv`;
+- `paper_icdm/tables/table_iii_protocol.csv`;
+- `paper_icdm/tables/table_iv_direct_forecasting.csv`;
+- `paper_icdm/tables/table_v_winner_family_counts.csv`;
+- `paper_icdm/tables/table_vi_meta_selection_results.csv`.
+
+If a required source is missing or an exact sheet cannot be validated, the builder writes a clearly named diagnostic or `*_NEEDS_SOURCE.csv` output instead of inventing values. Figure builder scripts remain future work.
 
 ## Lightweight artifact validation
 
@@ -105,4 +120,8 @@ python paper_icdm/scripts/check_artifacts.py
 
 This checker validates the presence and consistency of processed data, feature artifacts, forecasting benchmark outputs, and meta-learning outputs without rerunning training.
 
-No table or figure builder scripts are documented yet because those scripts do not exist in this stage.
+Then build the paper tables:
+
+```bash
+python paper_icdm/scripts/build_paper_tables.py
+```

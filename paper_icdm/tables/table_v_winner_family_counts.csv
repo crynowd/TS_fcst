@@ -1,0 +1,4 @@
+Model family,RMSE wins,DA wins,RMSE share,DA share,task_count,aggregation,needs_manual_verification,verification_note
+Zero/mean baselines,829,187,0.6610845295055822,0.14912280701754385,1254,mean fold scores by series_id+horizon+model before selecting winners,False,
+Non-chaotic models,241,393,0.19218500797448165,0.3133971291866029,1254,mean fold scores by series_id+horizon+model before selecting winners,False,
+Chaos-inspired models,184,674,0.1467304625199362,0.5374800637958532,1254,mean fold scores by series_id+horizon+model before selecting winners,False,

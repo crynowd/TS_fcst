@@ -58,6 +58,7 @@ REQUIRED_ARTIFACTS = [
     "artifacts/meta_modeling/split_assignments_v2.csv",
     "artifacts/meta_modeling/task_results_v2.parquet",
     "artifacts/meta_modeling/model_order_mapping_v2.csv",
+    "artifacts/reports/forecasting_audit_v2/meta_modeling_experiments_v2.xlsx",
     "paper_icdm/model_family_mapping.csv",
 ]
 
@@ -688,7 +689,7 @@ def check_paper_coverage(reporter: Reporter) -> None:
         ("Table II", "selected architectures config + forecasting config", config_forecasting and config_arch, "OK"),
         ("Table III", "forecasting config + meta config + manifest + split metadata", config_forecasting and config_meta and exists["artifacts/forecasting/forecasting_benchmark_v2/run_manifest.json"] and exists["artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet"], "OK"),
         ("Table IV", "metrics_long", exists["artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet"], "OK"),
-        ("Table VI", "task_results + split_assignments", exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/split_assignments_v2.csv"], "OK"),
+        ("Table VI", "meta_modeling_experiments_v2.xlsx summary sheet + compact lineage files", exists["artifacts/reports/forecasting_audit_v2/meta_modeling_experiments_v2.xlsx"] and exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/split_assignments_v2.csv"] and exists["artifacts/meta_modeling/model_order_mapping_v2.csv"], "OK"),
         ("Figure 2", "task_results compact metrics", exists["artifacts/meta_modeling/task_results_v2.parquet"], "OK"),
         ("Figure 3", "task_results compact metrics", exists["artifacts/meta_modeling/task_results_v2.parquet"], "OK"),
     ]
