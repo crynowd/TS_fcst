@@ -12,6 +12,8 @@ paper_icdm/
   DATA.md                # data provenance and preprocessing
   REPRODUCIBILITY.md     # environment and validation plan
   RESULTS_MANIFEST.md    # mapping from paper outputs to artifacts
+  scripts/
+    check_artifacts.py   # lightweight artifact validation
 ```
 
 ## Main Paper Path
@@ -87,9 +89,17 @@ The current repository state can support artifact-based validation of:
 
 Future scripts are intentionally not created in this stage:
 
-- `check_artifacts.py`: to be added in the next stage;
 - `build_paper_tables.py`: to be added later;
 - `build_paper_figures.py`: to be added later.
 
-No commands for those scripts are documented yet because the scripts do not exist in this stage.
+## Lightweight artifact validation
 
+Run from the repository root:
+
+```bash
+python paper_icdm/scripts/check_artifacts.py
+```
+
+This checker validates the presence and consistency of processed data, feature artifacts, forecasting benchmark outputs, and meta-learning outputs without rerunning training.
+
+No table or figure builder scripts are documented yet because those scripts do not exist in this stage.

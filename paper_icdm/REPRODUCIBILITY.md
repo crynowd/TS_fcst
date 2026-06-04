@@ -77,9 +77,17 @@ Artifact-based validation checks already computed results without rerunning heav
 - meta-learning task results;
 - source coverage for planned paper tables and figures.
 
+Run the lightweight artifact checker from the repository root:
+
+```bash
+python paper_icdm/scripts/check_artifacts.py
+```
+
+The checker reads existing files only. It validates processed-data counts and length policy, feature-list and feature-matrix dimensions, forecasting benchmark models/metrics/folds/horizons, meta-learning splits and task outputs, paper-output source coverage, and artifact tracking/upload recommendations.
+
 ## Expected Validation Checks
 
-A future `check_artifacts.py` should verify:
+`paper_icdm/scripts/check_artifacts.py` verifies:
 
 - all key files listed in `RESULTS_MANIFEST.md` are present or explicitly marked unavailable;
 - `artifacts/processed/log_returns_v1.parquet` contains 418 series for `dataset_profile = core_balanced`;
@@ -114,4 +122,3 @@ A future `check_artifacts.py` should verify:
 - Figure builder scripts are not added yet.
 - Exact runtime and infrastructure values need manual filling.
 - Exact artifact upload strategy needs verification, especially for large untracked artifacts.
-

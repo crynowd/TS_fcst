@@ -4,6 +4,12 @@ This manifest maps each paper result to its source files in the repository and r
 
 ## Paper Output Mapping
 
+Coverage can be checked from the repository root with:
+
+```bash
+python paper_icdm/scripts/check_artifacts.py
+```
+
 | Paper item | Description | Primary source artifact/config | Derived output planned path | Status | Notes |
 |---|---|---|---|---|---|
 | Table I | 25 time-series features | `artifacts/meta_modeling/feature_list_v2.csv`; `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet` | `paper_icdm/tables/table_i_features.csv` | Source exists locally; output not created | `feature_list_v2.csv` has 25 rows locally but is not tracked. |
@@ -41,4 +47,3 @@ This manifest maps each paper result to its source files in the repository and r
 Large `.parquet` files and `artifacts/reports.zip` are present locally but not tracked. No large artifacts are added in this documentation stage. The next stage should decide whether each large file belongs in Git LFS, GitHub Release assets, or external storage.
 
 Excel reports and generated paper report files: needs verification. No paper-specific `paper_icdm/tables/` or `paper_icdm/figures/` outputs are created in this stage.
-
