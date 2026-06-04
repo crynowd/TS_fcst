@@ -1,0 +1,12 @@
+model_name,paper_display_name,family
+naive_zero,Zero-return predictor,Zero/mean baselines
+naive_mean,Historical-mean predictor,Zero/mean baselines
+ridge_lag,Ridge autoregression,Non-chaotic models
+esn,Echo state network,Non-chaotic models
+vanilla_mlp,Feed-forward MLP,Non-chaotic models
+lstm_forecast,LSTM regressor,Non-chaotic models
+chaotic_esn,Chaotic spectral-radius ESN,Chaos-inspired models
+transient_chaotic_esn,Transient chaotic ESN,Chaos-inspired models
+chaotic_mlp,Logistic-map activated MLP,Chaos-inspired models
+chaotic_logistic_net,Input-driven logistic-map reservoir,Chaos-inspired models
+chaotic_lstm_forecast,Chaos-initialized LSTM,Chaos-inspired models

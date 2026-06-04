@@ -75,6 +75,7 @@ Artifact-based validation checks already computed results without rerunning heav
 - model list;
 - forecasting metrics and statuses;
 - meta-learning task results;
+- explicit broad-family model mapping;
 - source coverage for planned paper tables and figures.
 
 Run the lightweight artifact checker from the repository root:
@@ -83,7 +84,7 @@ Run the lightweight artifact checker from the repository root:
 python paper_icdm/scripts/check_artifacts.py
 ```
 
-The checker reads existing files only. It validates processed-data counts and length policy, feature-list and feature-matrix dimensions, forecasting benchmark models/metrics/folds/horizons, meta-learning splits and task outputs, paper-output source coverage, and artifact tracking/upload recommendations.
+The checker reads existing files only. It validates processed-data counts and length policy, feature-list and feature-matrix dimensions, forecasting benchmark models/metrics/folds/horizons, meta-learning splits and task outputs, the explicit model-family mapping, paper-output source coverage, and artifact tracking/upload recommendations.
 
 ## Expected Validation Checks
 
@@ -108,7 +109,8 @@ The checker reads existing files only. It validates processed-data counts and le
 - `artifacts/meta_modeling/task_results_v2.parquet` contains RMSE and directional accuracy targets;
 - top-k values are `{3, 4, 5, 6}`;
 - classification models include logistic regression, random forest, and CatBoost;
-- `artifacts/meta_modeling/routing_rows_v2.parquet` contains fields for selected, best single, and oracle routes or enough data to reconstruct them;
+- `paper_icdm/model_family_mapping.csv` contains exactly the 11 expected forecasting models and exactly the families `Zero/mean baselines`, `Non-chaotic models`, and `Chaos-inspired models`;
+- `artifacts/meta_modeling/routing_rows_v2.parquet`, when available externally or locally, contains fields for selected, best single, and oracle routes or enough data to reconstruct them;
 - Table I, II, IV, V, and VI can be built from deterministic source artifacts;
 - Figure 2, 3, and 4 can be built from deterministic source artifacts;
 - Figure 1 is a schematic/paper figure and can be either stored or manually recreated;
@@ -121,4 +123,5 @@ The checker reads existing files only. It validates processed-data counts and le
 - Table builder scripts are not added yet.
 - Figure builder scripts are not added yet.
 - Exact runtime and infrastructure values need manual filling.
-- Exact artifact upload strategy needs verification, especially for large untracked artifacts.
+- Exact artifact upload strategy needs verification for large optional artifacts. `predictions.parquet`, `routing_rows_v2.parquet`, and `artifacts/reports.zip` are intentionally not committed directly to Git; use Git LFS, GitHub Release assets, or an external archive if they are needed.
+- Stage 3B will add `build_paper_tables.py`.

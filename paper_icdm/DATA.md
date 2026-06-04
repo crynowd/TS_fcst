@@ -147,33 +147,38 @@ Processed files required for validation without full recomputation:
 - `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`;
 - `artifacts/meta_modeling/feature_list_v2.csv`;
 - `artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet`;
-- `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`;
 - `artifacts/forecasting/forecasting_benchmark_v2/run_manifest.json`;
 - `artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet`;
 - `artifacts/meta_modeling/split_assignments_v2.csv`;
-- `artifacts/meta_modeling/routing_rows_v2.parquet`;
 - `artifacts/meta_modeling/task_results_v2.parquet`;
 - `artifacts/meta_modeling/model_order_mapping_v2.csv`.
+
+Large optional files for full route/prediction archival:
+
+- `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`;
+- `artifacts/meta_modeling/routing_rows_v2.parquet`;
+- `artifacts/reports.zip`.
 
 Tracked in Git in the current environment:
 
 - `artifacts/processed/log_returns_v1.parquet`;
 - `artifacts/processed/series_catalog_v1.parquet`;
 - `artifacts/processed/dataset_profiles_v1.parquet`.
-
-Existing locally but not tracked in Git in the current environment:
-
 - `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`;
 - `artifacts/meta_modeling/feature_list_v2.csv`;
 - `artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet`;
-- `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`;
 - `artifacts/forecasting/forecasting_benchmark_v2/run_manifest.json`;
 - `artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet`;
 - `artifacts/meta_modeling/split_assignments_v2.csv`;
-- `artifacts/meta_modeling/routing_rows_v2.parquet`;
 - `artifacts/meta_modeling/task_results_v2.parquet`;
 - `artifacts/meta_modeling/model_order_mapping_v2.csv`;
+- `paper_icdm/model_family_mapping.csv`.
+
+Existing locally but intentionally not tracked directly in Git:
+
+- `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`;
+- `artifacts/meta_modeling/routing_rows_v2.parquet`;
 - `artifacts/reports.zip`.
 
-Recommended next-step upload strategy: needs verification. Large local artifacts such as `predictions.parquet`, `routing_rows_v2.parquet`, and `artifacts/reports.zip` should be evaluated for Git LFS, GitHub Release assets, or external archival storage rather than committed directly.
+Recommended next-step upload strategy: large local artifacts such as `predictions.parquet`, `routing_rows_v2.parquet`, and `artifacts/reports.zip` should be evaluated for Git LFS, GitHub Release assets, or external archival storage rather than committed directly.
 

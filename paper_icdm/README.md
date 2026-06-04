@@ -12,6 +12,7 @@ paper_icdm/
   DATA.md                # data provenance and preprocessing
   REPRODUCIBILITY.md     # environment and validation plan
   RESULTS_MANIFEST.md    # mapping from paper outputs to artifacts
+  model_family_mapping.csv # explicit broad-family mapping for Table V/Figure 4
   scripts/
     check_artifacts.py   # lightweight artifact validation
 ```
@@ -83,13 +84,15 @@ The current repository state can support artifact-based validation of:
 - dataset counts for the `core_balanced` profile;
 - the 25-feature list;
 - forecasting benchmark summaries;
-- winner counts by model or broad model family after a documented family mapping is added;
+- winner counts by model or broad model family using `paper_icdm/model_family_mapping.csv`;
 - meta-learning task results;
 - paper tables and figures after future builder scripts are added.
 
+Tracked compact v2 artifacts now include the forecasting manifest, split metadata, fold-level metrics, feature list/matrix, meta-learning split assignments, task results, and model-order mapping. The large optional artifacts `artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet`, `artifacts/meta_modeling/routing_rows_v2.parquet`, and `artifacts/reports.zip` are intentionally not added directly to Git; use Git LFS, GitHub Release assets, or an external archive if they are needed for full route-level inspection.
+
 Future scripts are intentionally not created in this stage:
 
-- `build_paper_tables.py`: to be added later;
+- `build_paper_tables.py`: to be added in Stage 3B;
 - `build_paper_figures.py`: to be added later.
 
 ## Lightweight artifact validation

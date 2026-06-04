@@ -39,6 +39,11 @@ EXPECTED_TOP_K = {3, 4, 5, 6}
 EXPECTED_FEATURE_COUNT = 25
 EXPECTED_SERIES = 418
 EXPECTED_MARKETS = {"RU": 209, "US": 209}
+EXPECTED_FAMILIES = {
+    "Zero/mean baselines",
+    "Non-chaotic models",
+    "Chaos-inspired models",
+}
 
 
 REQUIRED_ARTIFACTS = [
@@ -51,12 +56,13 @@ REQUIRED_ARTIFACTS = [
     "artifacts/forecasting/forecasting_benchmark_v2/run_manifest.json",
     "artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet",
     "artifacts/meta_modeling/split_assignments_v2.csv",
-    "artifacts/meta_modeling/routing_rows_v2.parquet",
     "artifacts/meta_modeling/task_results_v2.parquet",
     "artifacts/meta_modeling/model_order_mapping_v2.csv",
+    "paper_icdm/model_family_mapping.csv",
 ]
 
 OPTIONAL_ARTIFACTS = [
+    "artifacts/meta_modeling/routing_rows_v2.parquet",
     "artifacts/forecasting/forecasting_benchmark_v2/predictions.parquet",
     "artifacts/reports.zip",
 ]
@@ -519,7 +525,11 @@ def check_meta_artifacts(reporter: Reporter) -> None:
         except RuntimeError as exc:
             reporter.fail(section, str(exc))
 
-    if require_file(reporter, str(rel(routing_path)), section):
+    if routing_path.exists():
+        reporter.warning(
+            section,
+            f"{rel(routing_path)} present ({file_size(routing_path)}); large optional route-level source",
+        )
         try:
             routing = read_table(routing_path)
             relevant = candidate_columns(routing, ["selected", "fixed", "best", "oracle", "metric", "model", "score"])
@@ -532,6 +542,11 @@ def check_meta_artifacts(reporter: Reporter) -> None:
                 reporter.ok(section, "routing_rows contains selected/best/oracle route fields")
         except RuntimeError as exc:
             reporter.fail(section, str(exc))
+    else:
+        reporter.warning(
+            section,
+            "routing_rows_v2.parquet absent; optional external source for detailed route reconstruction",
+        )
 
     if require_file(reporter, str(rel(mapping_path)), section):
         try:
@@ -545,6 +560,72 @@ def check_meta_artifacts(reporter: Reporter) -> None:
                 reporter.warning(section, f"no model-name candidate column found; actual columns: {list(mapping.columns)}")
         except RuntimeError as exc:
             reporter.fail(section, str(exc))
+
+
+def check_model_family_mapping(reporter: Reporter) -> None:
+    section = "Model-family mapping"
+    mapping_path = repo_path("paper_icdm/model_family_mapping.csv")
+    metrics_path = repo_path("artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet")
+    if not require_file(reporter, str(rel(mapping_path)), section):
+        return
+    try:
+        mapping = read_table(mapping_path)
+    except RuntimeError as exc:
+        reporter.fail(section, str(exc))
+        return
+    if not require_columns(
+        reporter,
+        section,
+        mapping,
+        ["model_name", "paper_display_name", "family"],
+    ):
+        return
+    observed_models = set(mapping["model_name"].dropna().astype(str).unique())
+    observed_families = set(mapping["family"].dropna().astype(str).unique())
+    extra_models = observed_models - EXPECTED_MODELS
+    missing_models = EXPECTED_MODELS - observed_models
+    if missing_models or extra_models:
+        reporter.fail(
+            section,
+            f"model mapping mismatch; missing={sorted(missing_models)}, extra={sorted(extra_models)}",
+        )
+    else:
+        reporter.ok(section, "mapping contains exactly the 11 expected models")
+    if observed_families == EXPECTED_FAMILIES:
+        reporter.ok(section, f"mapping families match expected set: {sorted(EXPECTED_FAMILIES)}")
+    else:
+        reporter.fail(
+            section,
+            f"family mismatch; expected={sorted(EXPECTED_FAMILIES)}, observed={sorted(observed_families)}",
+        )
+    duplicate_models = mapping["model_name"][mapping["model_name"].duplicated()].tolist()
+    if duplicate_models:
+        reporter.fail(section, f"duplicate model_name entries: {duplicate_models}")
+    else:
+        reporter.ok(section, "no duplicate model_name entries")
+    if metrics_path.exists():
+        try:
+            metrics = read_table(metrics_path)
+        except RuntimeError as exc:
+            reporter.fail(section, str(exc))
+            return
+        if "model_name" not in metrics.columns:
+            reporter.fail(section, "metrics_long.parquet has no model_name column")
+            return
+        metrics_models = set(metrics["model_name"].dropna().astype(str).unique())
+        missing_from_mapping = metrics_models - observed_models
+        missing_from_metrics = observed_models - metrics_models
+        if missing_from_mapping or missing_from_metrics:
+            reporter.warning(
+                section,
+                "metrics/model-family mapping names differ; "
+                f"missing_from_mapping={sorted(missing_from_mapping)}, "
+                f"missing_from_metrics={sorted(missing_from_metrics)}",
+            )
+        else:
+            reporter.ok(section, "Table V and Figure 4 coverage has metrics_long plus family mapping")
+    else:
+        reporter.warning(section, "metrics_long.parquet unavailable; Table V and Figure 4 remain incomplete")
 
 
 def artifact_recommendation(path: Path, optional: bool, tracked: bool) -> str:
@@ -585,11 +666,14 @@ def check_tracking(reporter: Reporter) -> None:
         reporter.add(status, section, message, critical=(status == "FAIL"))
         if exists and not is_tracked and recommendation not in {"optional", "missing"}:
             reporter.recommended_uploads.append(f"{relative_path} -> {recommendation}")
-    reports_zip = repo_path("artifacts/reports.zip")
-    if reports_zip.exists():
-        reporter.warning(section, "artifacts/reports.zip present; archival decision needed")
-    else:
-        reporter.warning(section, "artifacts/reports.zip absent; optional archival bundle not available")
+    for large_artifact in OPTIONAL_ARTIFACTS:
+        path = repo_path(large_artifact)
+        if path.exists() and large_artifact in tracked:
+            reporter.warning(section, f"{large_artifact} is tracked; prefer LFS/release/external archive")
+        elif path.exists():
+            reporter.warning(section, f"{large_artifact} present but not tracked; archive externally if needed")
+        else:
+            reporter.warning(section, f"{large_artifact} absent; optional external artifact")
 
 
 def check_paper_coverage(reporter: Reporter) -> None:
@@ -598,15 +682,15 @@ def check_paper_coverage(reporter: Reporter) -> None:
     config_forecasting = repo_path("configs/forecasting_benchmark_v2.yaml").exists()
     config_arch = repo_path("configs/forecasting_selected_architectures_v1.yaml").exists()
     config_meta = repo_path("configs/meta_modeling_experiments_v2.yaml").exists()
-    family_mapping = repo_path("paper_icdm/model_family_mapping.md").exists()
+    family_mapping = repo_path("paper_icdm/model_family_mapping.csv").exists()
     rows = [
         ("Table I", "feature_list_v2 + feature matrix", exists["artifacts/meta_modeling/feature_list_v2.csv"] and exists["artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet"], "OK"),
         ("Table II", "selected architectures config + forecasting config", config_forecasting and config_arch, "OK"),
         ("Table III", "forecasting config + meta config + manifest + split metadata", config_forecasting and config_meta and exists["artifacts/forecasting/forecasting_benchmark_v2/run_manifest.json"] and exists["artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet"], "OK"),
         ("Table IV", "metrics_long", exists["artifacts/forecasting/forecasting_benchmark_v2/metrics_long.parquet"], "OK"),
-        ("Table VI", "task_results + routing_rows + split_assignments", exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/routing_rows_v2.parquet"] and exists["artifacts/meta_modeling/split_assignments_v2.csv"], "OK"),
-        ("Figure 2", "task_results/routing_rows", exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/routing_rows_v2.parquet"], "OK"),
-        ("Figure 3", "task_results/routing_rows", exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/routing_rows_v2.parquet"], "OK"),
+        ("Table VI", "task_results + split_assignments", exists["artifacts/meta_modeling/task_results_v2.parquet"] and exists["artifacts/meta_modeling/split_assignments_v2.csv"], "OK"),
+        ("Figure 2", "task_results compact metrics", exists["artifacts/meta_modeling/task_results_v2.parquet"], "OK"),
+        ("Figure 3", "task_results compact metrics", exists["artifacts/meta_modeling/task_results_v2.parquet"], "OK"),
     ]
     print("\nCoverage matrix:")
     print("Paper item | Source coverage | Status")
@@ -673,6 +757,7 @@ def main() -> int:
     check_feature_artifacts(reporter)
     check_forecasting_artifacts(reporter)
     check_meta_artifacts(reporter)
+    check_model_family_mapping(reporter)
     check_paper_coverage(reporter)
     check_tracking(reporter)
     print_summary(reporter)
