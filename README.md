@@ -1,3 +1,9 @@
+## ICDM paper reproducibility
+
+The reproducibility layer for the ICDM paper is documented in [`paper_icdm/`](paper_icdm/README.md). It identifies the configs, processed artifacts, benchmark outputs, and meta-learning results used for the paper.
+
+Note: older smoke/demo configs are kept for lightweight checks and are not the main paper benchmark.
+
 # Моделирование и прогнозирование временных рядов с использованием хаотических нейронных сетей
 
 ## Описание проекта
