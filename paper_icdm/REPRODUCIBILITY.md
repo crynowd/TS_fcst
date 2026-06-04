@@ -1,0 +1,117 @@
+# ICDM Paper Reproducibility Plan
+
+This document describes the current reproducibility environment and the planned validation checks for the ICDM paper route.
+
+## Environment
+
+Observed dependency files:
+
+- `requirements.txt` exists.
+
+Not observed at the repository root:
+
+- `environment.yml`;
+- `pyproject.toml`;
+- `setup.py`;
+- lock files.
+
+The current `requirements.txt` lists dependencies but does not pin versions. A pinned environment file is recommended before final archival.
+
+Current listed dependencies:
+
+```text
+pandas
+numpy
+scipy
+statsmodels
+openpyxl
+pyarrow
+PyYAML
+pytest
+scikit-learn
+matplotlib
+seaborn
+torch
+catboost
+```
+
+TODO: record the exact Python version, operating system, accelerator/CUDA details if applicable, and runtime infrastructure used for the final reported experiments. These values are not specified by the checked repository files.
+
+## Reproduction Modes
+
+### Full Recomputation
+
+Full recomputation covers:
+
+- preprocessing and data inventory;
+- log-return construction;
+- feature computation;
+- forecasting benchmark execution;
+- meta-learning experiments.
+
+The relevant configs are:
+
+- `configs/data_inventory_v1.yaml`;
+- `configs/features_block_A_v1.yaml`;
+- `configs/features_block_B_v1.yaml`;
+- `configs/features_block_C_v1.yaml`;
+- `configs/features_block_D_v1.yaml`;
+- `configs/feature_screening_v1.yaml`;
+- `configs/feature_consolidation_v1.yaml`;
+- `configs/forecasting_benchmark_v2.yaml`;
+- `configs/forecasting_selected_architectures_v1.yaml`;
+- `configs/meta_modeling_experiments_v2.yaml`.
+
+Exact commands for full recomputation should be verified in a later stage before archival. This document intentionally does not provide unverified full-run commands.
+
+### Artifact-Based Validation
+
+Artifact-based validation checks already computed results without rerunning heavy training. It should validate:
+
+- existence of key artifacts;
+- dataset counts;
+- split structure;
+- feature dimensions;
+- model list;
+- forecasting metrics and statuses;
+- meta-learning task results;
+- source coverage for planned paper tables and figures.
+
+## Expected Validation Checks
+
+A future `check_artifacts.py` should verify:
+
+- all key files listed in `RESULTS_MANIFEST.md` are present or explicitly marked unavailable;
+- `artifacts/processed/log_returns_v1.parquet` contains 418 series for `dataset_profile = core_balanced`;
+- markets in the `core_balanced` profile contain 209 RU and 209 US series;
+- series lengths follow the policy: minimum length at least 1500, target length 2000, longer histories truncated;
+- current tracked artifacts show 380 series with 2000 returns, 38 shorter series, and minimum observed selected length 1501;
+- horizons are `{1, 5, 20}`;
+- folds are `{1, 2, 3}`;
+- window sizes are `{64, 32, 16}` for horizons `{1, 5, 20}`;
+- forecasting metrics contain 11 models;
+- expected model names are present: `naive_zero`, `naive_mean`, `ridge_lag`, `esn`, `chaotic_esn`, `transient_chaotic_esn`, `vanilla_mlp`, `chaotic_mlp`, `chaotic_logistic_net`, `lstm_forecast`, `chaotic_lstm_forecast`;
+- failed forecasting tasks are absent or explicitly documented;
+- the feature matrix has 25 feature columns;
+- feature rows correspond to `series_id x horizon x fold`;
+- split assignments have repeats `{1, 2, 3, 4, 5}`;
+- split counts are 876 train, 126 validation, and 252 test meta-observations per repeat/horizon/metric where this structure is present;
+- there is no leakage by key: the same instrument must not appear simultaneously in train, validation, and test within one repeat/horizon/metric;
+- `artifacts/meta_modeling/task_results_v2.parquet` contains RMSE and directional accuracy targets;
+- top-k values are `{3, 4, 5, 6}`;
+- classification models include logistic regression, random forest, and CatBoost;
+- `artifacts/meta_modeling/routing_rows_v2.parquet` contains fields for selected, best single, and oracle routes or enough data to reconstruct them;
+- Table I, II, IV, V, and VI can be built from deterministic source artifacts;
+- Figure 2, 3, and 4 can be built from deterministic source artifacts;
+- Figure 1 is a schematic/paper figure and can be either stored or manually recreated;
+- every generated paper output has a deterministic source artifact or a clearly documented manual source.
+
+## Known Limitations and TODO
+
+- Kaggle raw data download is external.
+- Dependency versions are not pinned yet.
+- Table builder scripts are not added yet.
+- Figure builder scripts are not added yet.
+- Exact runtime and infrastructure values need manual filling.
+- Exact artifact upload strategy needs verification, especially for large untracked artifacts.
+
