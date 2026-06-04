@@ -163,6 +163,22 @@ def fmt_metric(value: float, scale: float) -> float:
     return float(value) * scale
 
 
+def paper_display_scale(metric: str) -> tuple[float, str, str]:
+    metric_name = str(metric).lower()
+    if metric_name == "rmse":
+        note = "RMSE raw log-return units converted to percentage log-return points for paper display."
+        return 100.0, "percentage log-return points", note
+    if metric_name == "directional_accuracy":
+        return 100.0, "percent", "Directional accuracy fractions converted to percent for paper display."
+    return 1.0, "as stored", ""
+
+
+def scaled_or_blank(value: Any, scale: float) -> float | str:
+    if pd.isna(value):
+        return ""
+    return float(value) * scale
+
+
 def build_table_i(builder: TableBuilder) -> None:
     table = "Table I"
     sources = [FEATURE_LIST, FEATURE_MATRIX]
@@ -289,9 +305,10 @@ def build_table_iv(builder: TableBuilder) -> None:
         return
     metrics = pd.read_parquet(METRICS_LONG)
     metrics = metrics[metrics["status"].astype(str) == "success"].copy()
-    rmse_max = pd.to_numeric(metrics["rmse"], errors="coerce").max()
+    rmse_values = pd.to_numeric(metrics["rmse"], errors="coerce")
+    rmse_median = rmse_values.median()
     da_max = pd.to_numeric(metrics["directional_accuracy"], errors="coerce").max()
-    rmse_scale = 100.0 if rmse_max <= 1.0 else 1.0
+    rmse_scale = 100.0 if rmse_median <= 1.0 else 1.0
     da_scale = 100.0 if da_max <= 1.0 else 1.0
     if rmse_scale == 100.0:
         print("[INFO] Table IV: rmse values appear to be raw log-return units; multiplying by 100.")
@@ -312,12 +329,19 @@ def build_table_iv(builder: TableBuilder) -> None:
         }
         for horizon in [1, 5, 20]:
             sub = grouped[(grouped["model_name"] == model_name) & (grouped["horizon"] == horizon)]
-            row[f"RMSE h={horizon}"] = fmt_metric(float(sub["rmse"].iloc[0]), rmse_scale) if not sub.empty else ""
+            rmse_raw = float(sub["rmse"].iloc[0]) if not sub.empty else ""
+            row[f"RMSE h={horizon}"] = fmt_metric(rmse_raw, rmse_scale) if rmse_raw != "" else ""
+            row[f"RMSE raw h={horizon}"] = rmse_raw
+            row[f"RMSE percent h={horizon}"] = fmt_metric(rmse_raw, 100.0) if rmse_raw != "" else ""
             row[f"DA h={horizon}"] = fmt_metric(float(sub["directional_accuracy"].iloc[0]), da_scale) if not sub.empty else ""
         row["rmse_scale"] = "percentage log-return points" if rmse_scale == 100.0 else "as stored"
         row["da_scale"] = "percent" if da_scale == 100.0 else "as stored"
         row["needs_manual_verification"] = any(row[f"RMSE h={h}"] == "" or row[f"DA h={h}"] == "" for h in [1, 5, 20])
-        row["verification_note"] = "" if not row["needs_manual_verification"] else "missing model/horizon metric rows"
+        row["verification_note"] = (
+            "missing model/horizon metric rows"
+            if row["needs_manual_verification"]
+            else "RMSE raw log-return units converted to percentage log-return points for paper display."
+        )
         rows.append(row)
     builder.write_csv(table, pd.DataFrame(rows), "table_iv_direct_forecasting.csv", sources)
 
@@ -465,19 +489,21 @@ def build_table_vi(builder: TableBuilder) -> None:
         .head(1)
         .reset_index(drop=True)
     )
-    scale_by_metric = {"rmse": "raw log-return units", "directional_accuracy": "fraction"}
     rows = []
     for _, row in selected.iterrows():
         metric = str(row["target_metric"])
         best_model = parse_best_single_model(builder, META_EXCEL, row)
+        display_multiplier, display_scale, display_note = paper_display_scale(metric)
+        manual_note = "" if best_model else "best fixed model name not found in best_single_repeat sheet"
+        verification_note = "; ".join(note for note in [manual_note, display_note] if note)
         rows.append(
             {
                 "h": int(row["horizon"]),
                 "Metric": metric,
                 "Best fixed model": best_model,
                 "Best observed": str(row["model"]),
-                "Delta": float(row["improvement_mean"]),
-                "Oracle": float(row["oracle_mean"]),
+                "Delta": scaled_or_blank(row["improvement_mean"], display_multiplier),
+                "Oracle": scaled_or_blank(row["oracle_mean"], display_multiplier),
                 "best_fixed_mean": float(row["best_single_mean"]),
                 "best_fixed_std": float(row["best_single_std"]) if not pd.isna(row["best_single_std"]) else "",
                 "best_observed_mean": float(row["achieved_mean"]),
@@ -486,16 +512,35 @@ def build_table_vi(builder: TableBuilder) -> None:
                 "delta_std": float(row["improvement_std"]) if not pd.isna(row["improvement_std"]) else "",
                 "oracle_mean": float(row["oracle_mean"]),
                 "oracle_std": float(row["oracle_std"]) if not pd.isna(row["oracle_std"]) else "",
+                "best_fixed_raw_mean": float(row["best_single_mean"]),
+                "best_fixed_raw_std": float(row["best_single_std"]) if not pd.isna(row["best_single_std"]) else "",
+                "best_observed_raw_mean": float(row["achieved_mean"]),
+                "best_observed_raw_std": float(row["achieved_std"]) if not pd.isna(row["achieved_std"]) else "",
+                "delta_raw_mean": float(row["improvement_mean"]),
+                "delta_raw_std": float(row["improvement_std"]) if not pd.isna(row["improvement_std"]) else "",
+                "oracle_raw_mean": float(row["oracle_mean"]),
+                "oracle_raw_std": float(row["oracle_std"]) if not pd.isna(row["oracle_std"]) else "",
+                "best_fixed_display_mean": scaled_or_blank(row["best_single_mean"], display_multiplier),
+                "best_fixed_display_std": scaled_or_blank(row["best_single_std"], display_multiplier),
+                "best_observed_display_mean": scaled_or_blank(row["achieved_mean"], display_multiplier),
+                "best_observed_display_std": scaled_or_blank(row["achieved_std"], display_multiplier),
+                "delta_display_mean": scaled_or_blank(row["improvement_mean"], display_multiplier),
+                "delta_display_std": scaled_or_blank(row["improvement_std"], display_multiplier),
+                "oracle_display_mean": scaled_or_blank(row["oracle_mean"], display_multiplier),
+                "oracle_display_std": scaled_or_blank(row["oracle_std"], display_multiplier),
                 "gap_mean": float(row["gap_mean"]),
+                "gap_raw_mean": float(row["gap_mean"]),
+                "gap_display_mean": scaled_or_blank(row["gap_mean"], display_multiplier),
                 "candidate_set": str(row["candidate_set"]),
                 "feature_set": str(row["feature_set"]),
                 "balancing_mode": str(row["balancing_mode"]),
                 "decision_rule": str(row["decision_rule"]),
                 "confidence_threshold": "" if pd.isna(row["confidence_threshold"]) else float(row["confidence_threshold"]),
-                "scale": scale_by_metric.get(metric, "as stored"),
+                "raw_scale": "raw log-return units" if metric == "rmse" else "fraction" if metric == "directional_accuracy" else "as stored",
+                "display_scale": display_scale,
                 "source_sheet": "summary",
                 "needs_manual_verification": best_model == "",
-                "verification_note": "" if best_model else "best fixed model name not found in best_single_repeat sheet",
+                "verification_note": verification_note,
             }
         )
     sources = [META_EXCEL]
