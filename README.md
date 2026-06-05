@@ -1,20 +1,8 @@
 ## ICDM paper reproducibility
 
-For the ICDM paper reproducibility package, start here:
+For the ICDM paper, start here:
 
 [`paper_icdm/README.md`](paper_icdm/README.md)
-
-This layer identifies the configs, processed data artifacts, benchmark outputs, meta-learning results, generated tables, and generated figures used for the paper.
-
-Quick validation:
-
-```bash
-python paper_icdm/scripts/check_artifacts.py
-python paper_icdm/scripts/build_paper_tables.py
-python paper_icdm/scripts/build_paper_figures.py
-```
-
-The older smoke/demo configs are retained for lightweight development checks and are not the main paper benchmark.
 
 # Моделирование и прогнозирование временных рядов с использованием хаотических нейронных сетей
 
