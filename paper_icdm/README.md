@@ -6,7 +6,7 @@ If rebuilding from raw datasets, update paths in `configs/paths.local.yaml` to m
 
 ## Brief Experiment Description
 
-The experiment builds a balanced financial time-series panel from Russian and U.S. equity data and converts adjusted price histories into log returns. The benchmark profile contains 418 series, with 209 Russian and 209 U.S. instruments, using a minimum length of 1500 returns and a target length of 2000 returns. Time-series features are computed from training segments and cover long memory, linear dependence, volatility dependence, complexity and spectrum, distribution and tails, and phase-space structure. The final fold-aware feature matrix contains 25 feature columns for each series, horizon, and rolling-origin fold. The forecasting benchmark evaluates 11 candidate models across horizons 1, 5, and 20 with three rolling-origin folds and horizon-specific input windows 64, 32, and 16. Forecasting quality is measured by RMSE and directional accuracy. Meta-learning experiments train logistic regression, random forest, and CatBoost classifiers to select forecasting models from top-k candidate sets, using five repeated instrument splits and confidence fallback rules. Paper tables I-VI and figures 2-4 are generated from the resulting processed data, benchmark outputs, meta-learning outputs, and paper-specific scripts.
+The experiment builds a balanced financial time-series panel from Russian and U.S. equity data and converts close price histories into log returns. The benchmark profile contains 418 series, with 209 Russian and 209 U.S. instruments, using a minimum length of 1500 returns and a target length of 2000 returns. Time-series features are computed from training segments and cover long memory, linear dependence, volatility dependence, complexity and spectrum, distribution and tails, and phase-space structure. The final fold-aware feature matrix contains 25 feature columns for each series, horizon, and rolling-origin fold. The forecasting benchmark evaluates 11 candidate models across horizons 1, 5, and 20 with three rolling-origin folds and horizon-specific input windows 64, 32, and 16. Forecasting quality is measured by RMSE and directional accuracy. Meta-learning experiments train logistic regression, random forest, and CatBoost classifiers to select forecasting models from top-k candidate sets, using five repeated instrument splits and confidence fallback rules. Paper tables I-VI and figures 2-4 are generated from the resulting processed data, benchmark outputs, meta-learning outputs, and paper-specific scripts.
 
 ## Data Sources
 
@@ -117,7 +117,7 @@ python -m src.cli.run_feature_consolidation --config configs/feature_consolidati
 python -m src.cli.run_final_feature_sets --master-path artifacts/features/features_master_v1.parquet
 ```
 
-These commands create consolidated feature sets and final feature-list artifacts from the screened master table.
+These commands create the v1 full-series consolidated clustering feature sets from the screened master table; these feature definitions are later rebuilt fold-aware in Step 6.
 
 ### 5. Forecasting Benchmark
 
@@ -133,7 +133,7 @@ The final benchmark route is `configs/forecasting_benchmark_v2.yaml`, which uses
 python -m src.cli.run_fold_aware_feature_rebuild --log-returns artifacts/processed/log_returns_v1.parquet --split-metadata artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet --old-features artifacts/features/final_clustering_features_with_chaos_v1.parquet --output-dir artifacts/features/fold_aware_features_v2 --report-dir artifacts/reports/forecasting_audit_v2 --overwrite true
 ```
 
-This command rebuilds the final time-series features by forecasting fold using train-only data. It creates `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`.
+This command rebuilds the final time-series features by forecasting fold using train-only data. It creates `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`. The `--old-features` artifact is the prior full-series reference used for feature definitions/comparison; the final v2 meta-learning input is `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`.
 
 ### 7. Meta-Learning Experiments
 
