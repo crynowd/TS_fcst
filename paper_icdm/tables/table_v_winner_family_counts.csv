@@ -1,4 +1,4 @@
-Model family,RMSE wins,DA wins,RMSE share,DA share,task_count,aggregation,needs_manual_verification,verification_note
-Zero/mean baselines,829,187,0.6610845295055822,0.14912280701754385,1254,mean fold scores by series_id+horizon+model before selecting winners,False,
-Non-chaotic models,241,393,0.19218500797448165,0.3133971291866029,1254,mean fold scores by series_id+horizon+model before selecting winners,False,
-Chaos-inspired models,184,674,0.1467304625199362,0.5374800637958532,1254,mean fold scores by series_id+horizon+model before selecting winners,False,
+Model family,RMSE wins,DA wins,RMSE share,DA share,task_count,aggregation,tie_break_candidate_order
+Zero/mean baselines,856,177,0.682615629984051,0.14114832535885166,1254,mean across 3 folds; exact ties use predefined clean candidate order,"[""chaotic_esn"", ""chaotic_logistic_net"", ""chaotic_lstm_forecast"", ""chaotic_mlp"", ""esn"", ""lstm_forecast"", ""naive_mean"", ""naive_zero"", ""ridge_lag"", ""transient_chaotic_esn"", ""vanilla_mlp""]"
+Non-chaotic models,215,420,0.17145135566188197,0.3349282296650718,1254,mean across 3 folds; exact ties use predefined clean candidate order,"[""chaotic_esn"", ""chaotic_logistic_net"", ""chaotic_lstm_forecast"", ""chaotic_mlp"", ""esn"", ""lstm_forecast"", ""naive_mean"", ""naive_zero"", ""ridge_lag"", ""transient_chaotic_esn"", ""vanilla_mlp""]"
+Chaos-inspired models,183,657,0.145933014354067,0.5239234449760766,1254,mean across 3 folds; exact ties use predefined clean candidate order,"[""chaotic_esn"", ""chaotic_logistic_net"", ""chaotic_lstm_forecast"", ""chaotic_mlp"", ""esn"", ""lstm_forecast"", ""naive_mean"", ""naive_zero"", ""ridge_lag"", ""transient_chaotic_esn"", ""vanilla_mlp""]"

@@ -1,157 +1,72 @@
 # Feature-Based Meta-Learning for Forecasting Model Selection in Financial Time Series
 
-This directory contains the reproducibility notes for the ICDM paper "Feature-Based Meta-Learning for Forecasting Model Selection in Financial Time Series". 
+This directory is the paper-facing layer for the current final, clean/leakage-safe experiments. The scripts here only aggregate completed artifacts. They do not rerun the forecasting benchmark, architecture tuning, meta-learning, or any other expensive experiment.
 
-If rebuilding from raw datasets, update paths in `configs/paths.local.yaml` to match your local environment.
+## Final experimental protocol
 
-## Brief Experiment Description
+The benchmark contains 418 log-return series: 209 Russian and 209 U.S. instruments. Eleven forecasting models are evaluated at horizons 1, 5, and 20 with horizon-specific input windows 64, 32, and 16 and three rolling-origin folds.
 
-The experiment builds a balanced financial time-series panel from Russian and U.S. equity data and converts close price histories into log returns. The benchmark profile contains 418 series, with 209 Russian and 209 U.S. instruments, using a minimum length of 1500 returns and a target length of 2000 returns. Time-series features are computed from training segments and cover long memory, linear dependence, volatility dependence, complexity and spectrum, distribution and tails, and phase-space structure. The final fold-aware feature matrix contains 25 feature columns for each series, horizon, and rolling-origin fold. The forecasting benchmark evaluates 11 candidate models across horizons 1, 5, and 20 with three rolling-origin folds and horizon-specific input windows 64, 32, and 16. Forecasting quality is measured by RMSE and directional accuracy. Meta-learning experiments train logistic regression, random forest, and CatBoost classifiers to select forecasting models from top-k candidate sets, using five repeated instrument splits and confidence fallback rules. Paper tables I-VI and figures 2-4 are generated from the resulting processed data, benchmark outputs, meta-learning outputs, and paper-specific scripts.
+Forecast samples use the `target_end_lte_right_origin_v1` separation policy. A sample is retained on the left side of a temporal boundary only when its complete target window ends no later than the first forecast origin on the right side. Consequently, the outer-train and fit boundaries purge 0, 4, and 19 samples for horizons 1, 5, and 20. The final clean `split_metadata.parquet` has zero outer-train/test, fit/validation, or validation/test target-window violations.
 
-## Data Sources
+Architecture tuning is independent of the 418-series benchmark. It used the same fixed panel of 12 U.S. ETFs (`afk.us`, `dwm.us`, `effe.us`, `fdis.us`, `iyg.us`, `jkf.us`, `jkh.us`, `mlpg.us`, `oil.us`, `qdyn.us`, `rth.us`, and `silj.us`), with zero instrument overlap with the benchmark. Final candidates are recorded in `configs/forecasting_selected_architectures_v1.yaml`; the per-family selected-series files are under `artifacts/architecture_tuning/*_v1/`.
 
-Raw market data must be downloaded externally from Kaggle:
+The meta-learning objects are the 418 instruments times three forecasting folds for each horizon. Features are rebuilt from the corresponding fold's training segment only. Five repeated instrument-level partitions keep all folds of an instrument together: 292 instruments (876 objects) for meta-train, 42 instruments (126 objects) for validation, and 84 instruments (252 objects) for test in every repeat, horizon, and metric.
 
-- U.S. equities: <https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs>
-- Russian equities: <https://www.kaggle.com/datasets/olegshpagin/russia-stocks-prices-ohlcv>
+The final selection protocol is strictly:
 
-## Reproduction Modes
+1. rank candidate forecasting models and fit preprocessing/classifiers on meta-train only;
+2. select one complete configuration independently for every `repeat x horizon x metric` using validation only, with metric direction and deterministic configuration order resolving ties;
+3. freeze that configuration and evaluate it once on test.
 
-### Full reproduction from raw data
+Test scores never select candidate sets, fixed baselines, features, classifiers, balancing, decision rules, thresholds, or any other configuration. The clean outputs contain 30 selections and 30 one-time frozen tests (five repeats times three horizons times two metrics).
 
-Use Steps 1-8 below and configure local raw-data paths in `configs/paths.local.yaml`.
+Uncertainty for the central selected-versus-fixed comparison uses a 10,000-draw cluster bootstrap over `series_id`, so the three folds and repeat appearances of the same instrument are not treated as independent observations. The corresponding artifact is `artifacts/meta_modeling/clean_meta_learning_v1/paired_uncertainty_clustered_by_series_v1.csv`.
 
-### Reproduction from processed artifacts
+## Numbered tables and their sources
 
-Download the prepared artifacts from Google Drive and place them into the repository preserving the directory structure. In this mode, users can skip raw Kaggle dataset reconstruction.
+`paper_icdm/scripts/build_paper_tables.py` regenerates Tables I-VI from these sources:
 
-## Large Artifacts
+| Paper item | Final source artifacts |
+| --- | --- |
+| Table I | `artifacts/meta_modeling/clean_meta_learning_v1/feature_list_v2.csv`; `artifacts/features/fold_aware_features_v2_clean_batched/final_train_only_features_by_fold.parquet` |
+| Table II | `configs/forecasting_selected_architectures_v1.yaml`; the four `configs/forecasting_benchmark_v2_clean_batched_batch_*.yaml` manifests |
+| Table III | clean batch configs; `configs/meta_modeling_clean_v1.yaml`; clean `split_metadata.parquet` and `task_audit.parquet`; clean split/selection/bootstrap artifacts; independent tuning selected-series files |
+| Table IV | `artifacts/forecasting/forecasting_benchmark_v2_clean_batched/metrics_long.parquet` |
+| Table V | the same clean `metrics_long.parquet` plus `paper_icdm/model_family_mapping.csv` |
+| Table VI | `selector_decisions_by_repeat_v1.csv`, `best_config_per_task_v2.csv`, and `selected_test_results_v2.csv` under `artifacts/meta_modeling/clean_meta_learning_v1/` |
 
-For full reconstruction download files from: https://drive.google.com/drive/folders/1crDB4n5BZN9IxuYYTVE-sfyRUKmIdmjS?usp=sharing
+Table V first averages the three fold scores for each `series_id x horizon x model`. Exact metric ties use the predeclared clean candidate order stored in the builder; they are not resolved by dynamically sorting model names.
 
-- `log_returns_v1.parquet` - canonical processed log-return panel used as the input data for feature computation, forecasting windows, and benchmark evaluation.
+Table VI reports the mean of the five frozen test evaluations. Directional-accuracy gain is `selected - fixed` in percentage points. RMSE is displayed in percentage log-return points and its gain is `fixed - selected`, so a negative gain means the selected route has higher RMSE.
 
-- `dataset_profiles_v1.parquet` - processed dataset-profile table used to select the core balanced panel for feature computation and downstream experiments.
+## Current paper figure
 
-- `series_catalog_v1.parquet` - processed data inventory documenting standardized raw series, eligibility decisions, lengths, date ranges, and quality/status metadata.
+`paper_icdm/scripts/build_paper_figures.py` generates the current Figure 2: the pooled confusion matrix for horizon 5 directional accuracy. It compares the validation-selected frozen route with the actual best candidate on each frozen test object and pools 1,260 rows (252 test objects times five repeats). Counts and row-normalized shares are shown in the cells; the supporting counts are saved beside the PNG/PDF.
 
-- `predictions.parquet` - full prediction-level output from the v2 forecasting benchmark, with true and predicted values by model, series, horizon, fold, and timestamp.
+The former RMSE line chart, directional-accuracy line chart, and winner-distribution chart are from the previous paper layout. They are deliberately removed and are no longer presented as Figures 2-4. The current builder does not invent replacements for manuscript figures whose current specification is not present in the repository.
 
-- `metrics_long.parquet` - fold-level benchmark metrics used by meta-learning, diagnostics, and paper table/figure builders.
+## Supporting analyses and scope
 
-- `split_metadata.parquet` - rolling-origin split metadata used to rebuild fold-aware train-only features.
+- **Market heterogeneity (RU/US).** Both clean benchmark rows and frozen routing rows retain instrument/market identity. RU and US slices should be reported separately before interpreting pooled averages; the balanced 209/209 benchmark design does not imply homogeneous effects across markets.
 
-- `routing_rows_v2.parquet` - route-level meta-learning output showing selected models, oracle models, best single models, achieved metrics, confidence values, and fallback decisions.
+- **Feature-family ablation.** The canonical completed artifact is `artifacts/meta_modeling/clean_meta_learning_feature_ablation_v1_repaired/feature_ablation_summary.csv`. It compares `full_25`, `standard`, `without_phase_space`, and `nonlinear_only` under the same meta-train/validation/frozen-test protocol. The repaired run preserved successful validation rows, completed the missing technical failures, reselected on the complete validation grid, and recomputed all 120 frozen tests; the abandoned partial v2 directory is not a final source.
 
-- `final_train_only_features_by_fold.parquet` - fold-aware 25-feature matrix computed only from each forecasting fold's training segment.
+- **Price-scale-transition sensitivity.** The post-hoc check transforms stored log-return targets and predictions with `exp(x) - 1`, without retraining. Directional accuracy is sign-invariant under this monotone zero-preserving transform, while RMSE/MAE change scale and may change local rankings. `artifacts/review_simple_returns_analysis/` is an older sensitivity snapshot based on the pre-clean benchmark path; it supports the qualitative diagnostic only and is not a numerical source for current Tables IV-VI.
 
-- `task_results_v2.parquet` - meta-learning task-level results used for aggregate comparisons and Table VI lineage.
+- **Feature stability.** Stability is assessed across the three rolling-origin training folds using rank/linear association and distribution-shift summaries. For current paper claims, the source feature matrix is `artifacts/features/fold_aware_features_v2_clean_batched/final_train_only_features_by_fold.parquet`. The older `artifacts/review_statistical_analysis/feature_stability_*` files predate the clean rebuild and are not final numbered-table sources.
 
-- `split_assignments_v2.csv` - repeated instrument split assignments for meta-train, validation, and test objects.
+- **Chaos-model train/validation/test diagnostic.** `artifacts/review_overfitting_diagnostics_full/` is a family-level sensitivity diagnostic of train/validation/test gaps, not proof for or against overfitting of any single final architecture. It predates the final independent retuning, and some architectures were subsequently retuned (including the final ESN, chaotic ESN, and chaotic LSTM settings). Therefore its model-specific parameter values must not be presented as the final Table II architectures; only the broad family-level sensitivity interpretation is retained.
 
-- `feature_list_v2.csv` - final fold-aware feature list used by the v2 meta-learning route and Table I.
+## Cheap paper-only rebuild and validation
 
-- `candidate_models_v2.csv` - top-k candidate model sets selected within each horizon, metric, and repeated split.
+Run from the repository root with the project environment:
 
-- `model_order_mapping_v2.csv` - class-index to forecasting-model mapping used by the meta-learning classifiers.
-
-- `meta_modeling_experiments_v2.xlsx` - final v2 meta-learning report used for Table VI lineage, including summary results, task results, routing rows, model mappings, split assignments, comparisons, and candidate details.
-
-- `forecasting_benchmark_forecasting_benchmark_v2.xlsx` - Excel report summarizing the final v2 forecasting benchmark run, including model registry, fold metrics, and benchmark diagnostics.
-
-- `neural_training_params.csv` - audit table of neural model training parameters used in the forecasting benchmark.
-
-- `metamodeling_v2_improvement_counts_best_config_*.csv` - compact and per-series improvement-count summaries for the best meta-modeling configuration.
-
-Minimal files by entry point:
-
-- Start from processed data: `log_returns_v1.parquet`, `dataset_profiles_v1.parquet`, and `series_catalog_v1.parquet`.
-- Start from forecasting outputs: `metrics_long.parquet` and `split_metadata.parquet`.
-- Reproduce paper tables/figures: `routing_rows_v2.parquet`, `task_results_v2.parquet`, `feature_list_v2.csv`, `split_assignments_v2.csv`, `candidate_models_v2.csv`, and `model_order_mapping_v2.csv`.
-
-## Repository Structure
-
-- `src/` - source code and CLI entry points.
-- `configs/` - pipeline and experiment configurations.
-- `artifacts/` - processed data, feature matrices, benchmark outputs, meta-learning outputs, and reports.
-- `paper_icdm/scripts/` - paper table and figure builders.
-- `paper_icdm/tables/` - generated paper table CSV files.
-- `paper_icdm/figures/` - generated paper figures.
-
-## Complete Experimental Steps and Commands
-
-Run commands from the repository root.
-
-### 1. Data Inventory and Log Returns
-
-```bash
-python -m src.cli.run_data_inventory --config configs/data_inventory_v1.yaml
-python -m src.cli.run_log_returns_pipeline --config configs/data_inventory_v1.yaml
+```powershell
+.\.venv\Scripts\python.exe paper_icdm\scripts\build_paper_tables.py
+.\.venv\Scripts\python.exe paper_icdm\scripts\build_paper_figures.py
+.\.venv\Scripts\python.exe paper_icdm\scripts\check_artifacts.py
 ```
 
-This stage standardizes raw RU/US market files according to `configs/data_inventory_v1.yaml` and creates processed data artifacts such as `artifacts/processed/log_returns_v1.parquet`, `series_catalog_v1.parquet`, and `dataset_profiles_v1.parquet`.
+These commands read existing Parquet/CSV/YAML artifacts and write only under `paper_icdm/tables` and `paper_icdm/figures`. They do not execute forecasting, tuning, feature-ablation training, or meta-learning.
 
-### 2. Feature Computation: Blocks A-D
-
-```bash
-python -m src.cli.run_feature_block --block A --config configs/features_block_A_v1.yaml
-python -m src.cli.run_feature_block --block B --config configs/features_block_B_v1.yaml
-python -m src.cli.run_feature_block --block C --config configs/features_block_C_v1.yaml
-python -m src.cli.run_feature_block --block D --config configs/features_block_D_v1.yaml
-```
-
-Block A covers dependence and long-memory features. Block B covers spectrum and complexity features. Block C covers distribution and tail features. Block D covers phase-space and chaos-related features.
-
-### 3. Feature Screening
-
-```bash
-python -m src.cli.run_feature_screening --config configs/feature_screening_v1.yaml
-```
-
-This stage merges feature blocks and applies missingness, variance, and correlation screening.
-
-### 4. Feature Consolidation
-
-```bash
-python -m src.cli.run_feature_consolidation --config configs/feature_consolidation_v1.yaml
-python -m src.cli.run_final_feature_sets --master-path artifacts/features/features_master_v1.parquet
-```
-
-These commands create the v1 full-series consolidated clustering feature sets from the screened master table; these feature definitions are later rebuilt fold-aware in Step 6.
-
-### 5. Forecasting Benchmark
-
-```bash
-python -m src.cli.run_forecasting_benchmark --config configs/forecasting_benchmark_v2.yaml
-```
-
-The final benchmark route is `configs/forecasting_benchmark_v2.yaml`, which uses `artifacts/processed/log_returns_v1.parquet`, 11 models, horizons 1/5/20, rolling-origin folds, and the selected architectures listed in `configs/forecasting_selected_architectures_v1.yaml`.
-
-### 6. Fold-Aware Feature Rebuild
-
-```bash
-python -m src.cli.run_fold_aware_feature_rebuild --log-returns artifacts/processed/log_returns_v1.parquet --split-metadata artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet --old-features artifacts/features/final_clustering_features_with_chaos_v1.parquet --output-dir artifacts/features/fold_aware_features_v2 --report-dir artifacts/reports/forecasting_audit_v2 --overwrite true
-```
-
-This command rebuilds the final time-series features by forecasting fold using train-only data. It creates `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`. The `--old-features` artifact is the prior full-series reference used for feature definitions/comparison; the final v2 meta-learning input is `artifacts/features/fold_aware_features_v2/final_train_only_features_by_fold.parquet`.
-
-### 7. Meta-Learning Experiments
-
-```bash
-python -m src.cli.run_meta_modeling_experiments --config configs/meta_modeling_experiments_v2.yaml
-```
-
-This is the final meta-learning route recorded by the repository files. It reads benchmark metrics and fold-aware features, evaluates logistic regression, random forest, and CatBoost classifiers, and writes v2 meta-modeling artifacts and the Excel report under `artifacts/reports/forecasting_audit_v2/`.
-
-### 8. Paper Tables and Figures
-
-```bash
-python paper_icdm/scripts/build_paper_tables.py
-python paper_icdm/scripts/build_paper_figures.py
-```
-
-The table builder generates tables I-VI under `paper_icdm/tables/`. The figure builder generates figures 2-4 under `paper_icdm/figures/`. Figure 1 is recorded in the existing documents as manual/schematic, and no data-generation script for it exists in the checked files.
-
-## Dependencies
-
-Dependencies are listed with pinned versions in `requirements.txt`.
+Raw market data, if a full reconstruction is intentionally required outside this paper-only workflow, comes from the U.S. Stocks/ETFs and Russian equities datasets documented in the repository-level configuration and data pipeline.

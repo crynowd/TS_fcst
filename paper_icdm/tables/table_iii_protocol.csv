@@ -1,18 +1,20 @@
-protocol_component,value,source,needs_manual_verification,verification_note
-Markets,"RU=209, US=209",artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet,False,
-Series representation,log_returns_v1,configs/forecasting_benchmark_v2.yaml,False,
-Main dataset size,418,artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet,False,
-Return history length,n_train range 360-1470; n_test=486,artifacts/forecasting/forecasting_benchmark_v2/split_metadata.parquet,False,
-Forecast horizons,"[1, 5, 20]",configs/forecasting_benchmark_v2.yaml,False,
-Input windows,"{""1"": 64, ""20"": 16, ""5"": 32}",configs/forecasting_benchmark_v2.yaml,False,
-Temporal evaluation,rolling_origin with 3 folds,configs/forecasting_benchmark_v2.yaml,False,
-Meta-observations,3762,artifacts/meta_modeling/split_assignments_v2.csv,False,
-Meta split,"{""test"": 2520, ""train"": 3753, ""validation"": 1557}",artifacts/meta_modeling/split_assignments_v2.csv,False,
-Per-horizon meta-observations,"{""1"": 1254, ""5"": 1254, ""20"": 1254}",artifacts/meta_modeling/split_assignments_v2.csv,False,
-Candidate sets,"[3, 4, 5, 6]",configs/meta_modeling_experiments_v2.yaml,False,
-Metamodels,"[""logistic_regression"", ""random_forest_classifier"", ""catboost_classifier""]",configs/meta_modeling_experiments_v2.yaml,False,
-Grid evaluation,"{""balancing_modes"": [""default"", ""balanced""], ""confidence_thresholds"": [0.5, 0.6, 0.7, 0.8], ""decision_rules"": [""top_1"", ""confidence_fallback""]}",configs/meta_modeling_experiments_v2.yaml,False,
-Fallback thresholds,"[0.5, 0.6, 0.7, 0.8]",configs/meta_modeling_experiments_v2.yaml,False,
-Reported metamodel result,"best configuration per (horizon, target_metric) selected by improvement_mean then gap_mean",configs/meta_modeling_experiments_v2.yaml,False,
-Repeated evaluation,"{""n_repeats"": 5, ""split_random_seed"": 42}",configs/meta_modeling_experiments_v2.yaml,False,
-Fixed-model baseline,best_single_metric in meta-modeling task results,artifacts/meta_modeling/task_results_v2.parquet,False,
+protocol_component,value,source
+Markets,"{""RU"": 209, ""US"": 209}",artifacts/forecasting/forecasting_benchmark_v2_clean_batched/split_metadata.parquet
+Benchmark instruments,418,artifacts/forecasting/forecasting_benchmark_v2_clean_batched/split_metadata.parquet
+Series representation,log_returns_v1,configs/forecasting_benchmark_v2_clean_batched_batch_01.yaml
+Forecast horizons,"[1, 5, 20]",configs/forecasting_benchmark_v2_clean_batched_batch_01.yaml
+Input windows,"{""1"": 64, ""20"": 16, ""5"": 32}",configs/forecasting_benchmark_v2_clean_batched_batch_01.yaml
+Rolling-origin folds,3,configs/forecasting_benchmark_v2_clean_batched_batch_01.yaml
+Target-window separation,['target_end_lte_right_origin_v1'],artifacts/forecasting/forecasting_benchmark_v2_clean_batched/split_metadata.parquet
+Boundary purge by horizon,h=1:0; h=5:4; h=20:19 samples from outer-train and fit boundaries,artifacts/forecasting/forecasting_benchmark_v2_clean_batched/split_metadata.parquet
+Successful forecasting tasks,41382,artifacts/forecasting/forecasting_benchmark_v2_clean_batched/task_audit.parquet
+Fold-aware meta-observations,3762,artifacts/forecasting/forecasting_benchmark_v2_clean_batched/split_metadata.parquet
+Meta split unit,instrument; all three folds remain together,artifacts/meta_modeling/clean_meta_learning_v1/split_assignments_v2.csv
+Meta split counts per repeat/horizon/metric,"{""test"": 252, ""train"": 876, ""validation"": 126}",artifacts/meta_modeling/clean_meta_learning_v1/split_assignments_v2.csv
+Repeated evaluation,5 instrument-level repeats,configs/meta_modeling_clean_v1.yaml
+Configuration protocol,meta-train fit -> validation selection per repeat x horizon x metric -> one frozen test evaluation,configs/meta_modeling_clean_v1.yaml
+Test use in selection,none,artifacts/meta_modeling/clean_meta_learning_v1/best_config_per_task_v2.csv
+Candidate sets,"[3, 4, 5, 6]",configs/meta_modeling_clean_v1.yaml
+Metamodels,"[""logistic_regression"", ""random_forest_classifier"", ""catboost_classifier""]",configs/meta_modeling_clean_v1.yaml
+Architecture tuning panel,12 US ETFs; overlap with benchmark=0,artifacts/architecture_tuning/esn_v1/selected_series_architecture_tuning_esn_v1.csv
+Cluster bootstrap,10000 draws; clustered by series_id,artifacts/meta_modeling/clean_meta_learning_v1/paired_uncertainty_clustered_by_series_v1.csv

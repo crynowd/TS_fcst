@@ -1,0 +1,7 @@
+actual_best_model,selected__chaotic_esn,selected__esn,selected__naive_mean,selected__ridge_lag,selected__transient_chaotic_esn,selected__vanilla_mlp,row_total,pooled_N
+chaotic_esn,38,12,52,3,7,8,120,1260
+esn,21,96,141,35,11,5,309,1260
+naive_mean,28,91,308,37,15,12,491,1260
+ridge_lag,12,58,105,21,4,5,205,1260
+transient_chaotic_esn,17,28,34,8,3,2,92,1260
+vanilla_mlp,18,3,11,0,4,7,43,1260

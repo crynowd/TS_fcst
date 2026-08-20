@@ -1,19 +1,19 @@
 metric,horizon,Model family,winner_count,winner_share,task_count,aggregation
-rmse,1,Zero/mean baselines,269,0.6435406698564593,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,1,Non-chaotic models,90,0.215311004784689,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,1,Chaos-inspired models,59,0.14114832535885166,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,5,Zero/mean baselines,289,0.6913875598086124,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,5,Non-chaotic models,72,0.1722488038277512,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,5,Chaos-inspired models,57,0.13636363636363635,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,20,Zero/mean baselines,271,0.6483253588516746,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,20,Non-chaotic models,79,0.18899521531100477,418,mean fold scores by series_id+horizon+model before selecting winners
-rmse,20,Chaos-inspired models,68,0.16267942583732056,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,1,Zero/mean baselines,47,0.11244019138755981,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,1,Non-chaotic models,166,0.39712918660287083,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,1,Chaos-inspired models,205,0.4904306220095694,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,5,Zero/mean baselines,72,0.1722488038277512,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,5,Non-chaotic models,111,0.26555023923444976,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,5,Chaos-inspired models,235,0.562200956937799,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,20,Zero/mean baselines,68,0.16267942583732056,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,20,Non-chaotic models,116,0.27751196172248804,418,mean fold scores by series_id+horizon+model before selecting winners
-directional_accuracy,20,Chaos-inspired models,234,0.5598086124401914,418,mean fold scores by series_id+horizon+model before selecting winners
+rmse,1,Zero/mean baselines,279,0.6674641148325359,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,1,Non-chaotic models,60,0.14354066985645933,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,1,Chaos-inspired models,79,0.18899521531100477,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,5,Zero/mean baselines,305,0.7296650717703349,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,5,Non-chaotic models,76,0.18181818181818182,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,5,Chaos-inspired models,37,0.08851674641148326,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,20,Zero/mean baselines,272,0.6507177033492823,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,20,Non-chaotic models,79,0.18899521531100477,418,mean across 3 folds; exact ties use predefined clean candidate order
+rmse,20,Chaos-inspired models,67,0.16028708133971292,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,1,Zero/mean baselines,44,0.10526315789473684,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,1,Non-chaotic models,146,0.3492822966507177,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,1,Chaos-inspired models,228,0.5454545454545454,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,5,Zero/mean baselines,68,0.16267942583732056,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,5,Non-chaotic models,136,0.3253588516746411,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,5,Chaos-inspired models,214,0.5119617224880383,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,20,Zero/mean baselines,65,0.15550239234449761,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,20,Non-chaotic models,138,0.33014354066985646,418,mean across 3 folds; exact ties use predefined clean candidate order
+directional_accuracy,20,Chaos-inspired models,215,0.5143540669856459,418,mean across 3 folds; exact ties use predefined clean candidate order
