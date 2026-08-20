@@ -1014,6 +1014,8 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
         inputs_cfg["metrics_path"] = stage_cfg.get("metrics_path")
     if "features_path" in stage_cfg and "features_path" not in inputs_cfg:
         inputs_cfg["features_path"] = stage_cfg.get("features_path")
+    if "meta_inputs_path" in stage_cfg and "meta_inputs_path" not in inputs_cfg:
+        inputs_cfg["meta_inputs_path"] = stage_cfg.get("meta_inputs_path")
     for key, value in list(inputs_cfg.items()):
         if key.endswith("_path") and value:
             inputs_cfg[key] = _resolve_path(str(value))
@@ -1052,15 +1054,22 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
         "confident_examples_csv_path": meta_dir / "confident_examples_experiments_v1.csv",
         "excel_report_path": reports_dir / "meta_modeling_experiments_v1.xlsx",
     }
-    for key, default_value in defaults.items():
-        outputs_cfg.setdefault(key, str(default_value))
-        outputs_cfg[key] = _resolve_path(str(outputs_cfg[key]))
+    if bool(stage_cfg.get("clean_inputs_required", False)):
+        outputs_cfg = {key: _resolve_path(str(value)) for key, value in outputs_cfg.items()}
+    else:
+        for key, default_value in defaults.items():
+            outputs_cfg.setdefault(key, str(default_value))
+            outputs_cfg[key] = _resolve_path(str(outputs_cfg[key]))
 
     merged: Dict[str, Any] = {
         "run_name": stage_cfg.get("run_name", "meta_modeling_experiments_v1"),
         "stage": stage_cfg.get("stage", "meta_modeling_experiments"),
         "feature_scope": stage_cfg.get("feature_scope", ""),
         "expected_n_folds": int(stage_cfg.get("expected_n_folds", 3)),
+        "clean_inputs_required": bool(stage_cfg.get("clean_inputs_required", False)),
+        "expected_observations": int(stage_cfg.get("expected_observations", 0)) or None,
+        "expected_feature_count": int(stage_cfg.get("expected_feature_count", 0)) or None,
+        "expected_model_count": int(stage_cfg.get("expected_model_count", 0)) or None,
         "horizons": stage_cfg.get("horizons", stage_cfg.get("target_horizons", [1, 5, 20])),
         "metrics": stage_cfg.get("metrics", stage_cfg.get("target_metrics", ["rmse", "directional_accuracy"])),
         "random_seed": int(stage_cfg.get("random_seed", stage_cfg.get("split", {}).get("random_seed", 42))),
@@ -1086,6 +1095,7 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
         "decision_rules": stage_cfg.get("decision_rules", ["top_1", "confidence_fallback"]),
         "confidence_thresholds": stage_cfg.get("confidence_thresholds", [0.5, 0.6, 0.7, 0.8]),
         "feature_sets": stage_cfg.get("feature_sets", ["full"]),
+        "feature_set_definitions": stage_cfg.get("feature_set_definitions", {}),
         "feature_selection": stage_cfg.get("feature_selection", {"method": "mutual_info", "top_n": 30, "min_features": 5}),
         "basic_features": stage_cfg.get("basic_features", {"enabled": True, "rolling_window": 20}),
         "auto_select_latest_forecasting": bool(stage_cfg.get("auto_select_latest_forecasting", True)),
@@ -1112,6 +1122,8 @@ def load_meta_modeling_experiments_config(config_path: str) -> Dict[str, Any]:
     required_inputs = ["features_path", "forecasting_series_metrics_path"]
     if str(merged.get("feature_scope", "")).strip() == "fold_aware_train_only":
         required_inputs = ["features_path", "metrics_path"]
+    if merged.get("clean_inputs_required"):
+        required_inputs = ["meta_inputs_path", "features_path", "metrics_path"]
     missing_inputs = [k for k in required_inputs if not str(merged["inputs"].get(k, "")).strip()]
     if missing_inputs:
         raise ConfigError(f"Missing experimental meta-modeling inputs: {', '.join(missing_inputs)}")

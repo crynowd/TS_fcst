@@ -1,0 +1,4 @@
+horizon,pearson_rmse_mae,spearman_rmse_mae,n_model_tasks,best_fixed_rmse,best_fixed_mae
+1,0.8953647963072464,0.9530004048313943,13794,naive_zero,naive_zero
+5,0.9085145199673634,0.9668413814398228,13794,naive_zero,naive_zero
+20,0.9490514694598828,0.9824443585581225,13794,naive_zero,naive_zero

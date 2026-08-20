@@ -1,0 +1,232 @@
+run_name: clean_meta_learning_feature_ablation_v1
+stage: clean_meta_learning_feature_ablation_v1
+feature_scope: fold_aware_train_only
+expected_n_folds: 3
+clean_inputs_required: true
+expected_observations: 3762
+expected_feature_count: 25
+expected_model_count: 11
+horizons:
+- 1
+- 5
+- 20
+metrics:
+- rmse
+- directional_accuracy
+random_seed: 42
+n_repeats: 5
+output_dir: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1
+report_dir: D:\Projects\TS_fcst\artifacts\reports\clean_meta_learning_feature_ablation_v1
+inputs:
+  metrics_path: D:\Projects\TS_fcst\artifacts\forecasting\forecasting_benchmark_v2_clean_batched\metrics_long.parquet
+  features_path: D:\Projects\TS_fcst\artifacts\features\fold_aware_features_v2_clean_batched\final_train_only_features_by_fold.parquet
+  meta_inputs_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_fold_aware_inputs_v1\clean_fold_aware_meta_inputs.parquet
+dataset_filter: ''
+join_keys:
+- series_id
+- ticker
+target_metrics:
+- rmse
+- directional_accuracy
+metric_columns: {}
+methods:
+- classification
+meta_models:
+- ridge
+- random_forest
+- catboost
+classification_models:
+- logistic_regression
+- random_forest_classifier
+- catboost_classifier
+scoring_models:
+- ridge
+- random_forest
+- catboost
+model_overrides:
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+  random_forest_classifier:
+    n_estimators: 200
+    max_depth: 8
+    min_samples_leaf: 3
+    n_jobs: -1
+  catboost_classifier:
+    iterations: 300
+    depth: 5
+    learning_rate: 0.05
+    l2_leaf_reg: 3.0
+    random_seed: 42
+    verbose: false
+feature_pruning:
+  corr_threshold: 0.9
+candidate_selection:
+  top_k_values:
+  - 3
+  - 4
+  - 5
+  - 6
+  closeness_tolerance: 0.05
+balancing_modes:
+- default
+- balanced
+decision_rules:
+- top_1
+- confidence_fallback
+confidence_thresholds:
+- 0.5
+- 0.6
+- 0.7
+- 0.8
+feature_sets:
+- full_25
+- standard
+- without_phase_space
+- nonlinear_only
+feature_set_definitions:
+  full_25:
+  - hurst_rs
+  - hurst_dfa
+  - acf_lag_2
+  - acf_lag_5
+  - acf_lag_10
+  - acf_lag_25
+  - acf_lag_50
+  - acf_lag_100
+  - abs_acf_lag_2
+  - abs_acf_lag_5
+  - abs_acf_lag_10
+  - abs_acf_lag_25
+  - abs_acf_lag_50
+  - vr_q10
+  - lb_ret_stat_50
+  - lz_complexity
+  - permutation_entropy
+  - spectral_flatness
+  - kurtosis
+  - robust_kurtosis
+  - tail_ratio_upper
+  - hill_tail_index
+  - correlation_dimension
+  - embedding_dimension
+  - selected_delay_tau
+  standard:
+  - hurst_rs
+  - hurst_dfa
+  - acf_lag_2
+  - acf_lag_5
+  - acf_lag_10
+  - acf_lag_25
+  - acf_lag_50
+  - acf_lag_100
+  - abs_acf_lag_2
+  - abs_acf_lag_5
+  - abs_acf_lag_10
+  - abs_acf_lag_25
+  - abs_acf_lag_50
+  - vr_q10
+  - lb_ret_stat_50
+  - kurtosis
+  - robust_kurtosis
+  - tail_ratio_upper
+  - hill_tail_index
+  without_phase_space:
+  - hurst_rs
+  - hurst_dfa
+  - acf_lag_2
+  - acf_lag_5
+  - acf_lag_10
+  - acf_lag_25
+  - acf_lag_50
+  - acf_lag_100
+  - abs_acf_lag_2
+  - abs_acf_lag_5
+  - abs_acf_lag_10
+  - abs_acf_lag_25
+  - abs_acf_lag_50
+  - vr_q10
+  - lb_ret_stat_50
+  - lz_complexity
+  - permutation_entropy
+  - spectral_flatness
+  - kurtosis
+  - robust_kurtosis
+  - tail_ratio_upper
+  - hill_tail_index
+  nonlinear_only:
+  - lz_complexity
+  - permutation_entropy
+  - spectral_flatness
+  - correlation_dimension
+  - embedding_dimension
+  - selected_delay_tau
+feature_selection:
+  method: mutual_info
+  top_n: 30
+  min_features: 5
+basic_features:
+  enabled: true
+  rolling_window: 20
+auto_select_latest_forecasting: false
+split:
+  test_size: 0.2
+  validation_size: 0.1
+  random_seed: 42
+  n_repeats: 5
+  random_seeds: []
+prediction_examples_per_task: 5
+outputs: &id001
+  meta_dataset_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\meta_dataset_summary_v2.csv
+  meta_dataset_summary_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\meta_dataset_summary_v2.parquet
+  model_order_mapping_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\model_order_mapping_v2.csv
+  routing_rows_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\routing_rows_v2.parquet
+  routing_rows_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\routing_rows_v2.csv
+  task_results_parquet_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\task_results_v2.parquet
+  task_results_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\task_results_v2.csv
+  split_assignments_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\split_assignments_v2.csv
+  repeat_aggregated_results_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\repeat_aggregated_results_v2.csv
+  best_single_baseline_by_repeat_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\best_single_baseline_by_repeat_v2.csv
+  feature_list_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\feature_list_v2.csv
+  feature_manifest_json_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\feature_manifest_v2.json
+  comparison_table_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\comparison_table_v2.csv
+  candidate_models_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\candidate_models_v2.csv
+  classification_probabilities_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\classification_probabilities_v2.csv
+  per_class_metrics_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\per_class_metrics_v2.csv
+  confusion_matrix_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\confusion_matrix_v2.csv
+  class_distribution_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\class_distribution_v2.csv
+  confidence_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\confidence_summary_v2.csv
+  selected_features_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\selected_features_v2.csv
+  candidate_filtering_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\candidate_filtering_summary_v2.csv
+  feature_regime_summary_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\feature_regime_summary_v2.csv
+  best_config_per_task_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\best_config_per_task_v2.csv
+  selected_test_results_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\selected_test_results_v2.csv
+  winner_label_diagnostics_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\winner_label_diagnostics_v2.csv
+  confident_examples_csv_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_meta_learning_feature_ablation_v1\confident_examples_v2.csv
+  coverage_checks_json_path: D:\Projects\TS_fcst\artifacts\reports\clean_meta_learning_feature_ablation_v1\metamodeling_v2_coverage_checks.json
+  resolved_config_snapshot_path: D:\Projects\TS_fcst\artifacts\reports\clean_meta_learning_feature_ablation_v1\clean_meta_learning_feature_ablation_v1_resolved_config_snapshot.yaml
+  excel_report_path: D:\Projects\TS_fcst\artifacts\reports\clean_meta_learning_feature_ablation_v1\meta_modeling_experiments_v2.xlsx
+artifacts:
+  interim: D:/Projects/TS_fcst/artifacts/interim
+  processed: D:/Projects/TS_fcst/artifacts/processed
+  features: D:/Projects/TS_fcst/artifacts/features
+  reports: D:/Projects/TS_fcst/artifacts/reports
+  logs: D:/Projects/TS_fcst/artifacts/logs
+  manifests: D:/Projects/TS_fcst/artifacts/manifests
+  meta_modeling: D:\Projects\TS_fcst\artifacts\meta_modeling
+meta:
+  config_path: D:\Projects\TS_fcst\configs\meta_modeling_clean_feature_ablation_v1.yaml
+  paths_config_path: D:\Projects\TS_fcst\configs\paths.local.yaml
+  project_root: D:\Projects\TS_fcst
+  config_hash: 221e913f78633eb5d18809497e42458d7ea5dd5cdf0d4c0ea61634aeba77b91c
+  run_id: clean_meta_learning_feature_ablation_v1_20260819T144537Z
+  log_path: D:\Projects\TS_fcst\artifacts\logs\clean_meta_learning_feature_ablation_v1_20260819T144537Z.log
+resolved_run_id: clean_meta_learning_feature_ablation_v1_20260819T144537Z
+resolved_timestamp_utc: '2026-08-19T14:45:37.459340+00:00'
+resolved_git_commit: 88ba3690a360d01170826293f760b48d5a9d2279
+resolved_inputs:
+  meta_inputs_path: D:\Projects\TS_fcst\artifacts\meta_modeling\clean_fold_aware_inputs_v1\clean_fold_aware_meta_inputs.parquet
+  metrics_path: D:\Projects\TS_fcst\artifacts\forecasting\forecasting_benchmark_v2_clean_batched\metrics_long.parquet
+  features_path: D:\Projects\TS_fcst\artifacts\features\fold_aware_features_v2_clean_batched\final_train_only_features_by_fold.parquet
+resolved_outputs: *id001
+selection_protocol: train_fit_validation_select_frozen_test_v1

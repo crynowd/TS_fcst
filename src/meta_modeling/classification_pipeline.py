@@ -93,14 +93,14 @@ def _build_v2_output_defaults(cfg: dict[str, Any]) -> dict[str, str]:
         "candidate_filtering_summary_csv_path": output_dir / "candidate_filtering_summary_v2.csv",
         "feature_regime_summary_csv_path": output_dir / "feature_regime_summary_v2.csv",
         "best_config_per_task_csv_path": output_dir / "best_config_per_task_v2.csv",
+        "selected_test_results_csv_path": output_dir / "selected_test_results_v2.csv",
+        "winner_label_diagnostics_csv_path": output_dir / "winner_label_diagnostics_v2.csv",
         "confident_examples_csv_path": output_dir / "confident_examples_v2.csv",
         "coverage_checks_json_path": report_dir / "metamodeling_v2_coverage_checks.json",
         "resolved_config_snapshot_path": report_dir / f"{run_name}_resolved_config_snapshot.yaml",
         "excel_report_path": report_dir / "meta_modeling_experiments_v2.xlsx",
     }
-    configured = {}
-    if str(cfg.get("feature_scope", "")).strip() != "fold_aware_train_only":
-        configured = dict(cfg.get("outputs", {}))
+    configured = dict(cfg.get("outputs", {}))
     return {k: str(Path(str(configured.get(k, v))).resolve()) for k, v in defaults.items()}
 
 
@@ -118,6 +118,37 @@ def _feature_cols_v2(features_df: pd.DataFrame) -> list[str]:
     if not cols:
         raise ValueError("No numeric fold-aware feature columns found")
     return cols
+
+
+def _resolve_clean_feature_sets(cfg: dict[str, Any], available_features: list[str]) -> dict[str, list[str]]:
+    """Resolve predeclared clean feature families without fitting or test inspection."""
+    definitions = cfg.get("feature_set_definitions", {})
+    requested = [str(x) for x in _as_list(cfg.get("feature_sets"), ["full"])]
+    if definitions:
+        if not isinstance(definitions, dict):
+            raise ValueError("feature_set_definitions must be a mapping of set name to feature names")
+        missing_sets = [name for name in requested if name not in definitions]
+        if missing_sets:
+            raise ValueError(f"Missing feature set definitions: {missing_sets}")
+        result: dict[str, list[str]] = {}
+        for name in requested:
+            cols = [str(col) for col in definitions[name]]
+            unknown = sorted(set(cols) - set(available_features))
+            if unknown:
+                raise ValueError(f"Feature set '{name}' contains unknown clean features: {unknown}")
+            if not cols or len(cols) != len(set(cols)):
+                raise ValueError(f"Feature set '{name}' must contain unique, nonempty feature names")
+            result[name] = cols
+        return result
+
+    result: dict[str, list[str]] = {}
+    if not requested or "full" in requested:
+        result["full"] = list(available_features)
+    if any(x in {"selected", "selected_features"} for x in requested):
+        result["selected"] = list(available_features)
+    if not result:
+        raise ValueError(f"Unsupported clean feature sets without definitions: {requested}")
+    return result
 
 
 def _coverage_checks_v2(
@@ -197,8 +228,108 @@ def _coverage_checks_v2(
 
 def _load_meta_dataset_v2(cfg: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
     inputs = dict(cfg.get("inputs", {}))
+    meta_inputs_path = str(inputs.get("meta_inputs_path", "")).strip()
     metrics_path = str(inputs.get("metrics_path") or inputs.get("forecasting_series_metrics_path") or cfg.get("metrics_path", "")).strip()
     features_path = str(inputs.get("features_path") or cfg.get("features_path", "")).strip()
+    if meta_inputs_path:
+        if not metrics_path or not features_path:
+            raise ValueError("clean meta-modeling requires meta_inputs_path, metrics_path, and features_path")
+        wide = pd.read_parquet(meta_inputs_path).copy()
+        metrics_df = pd.read_parquet(metrics_path).copy()
+        features_df = pd.read_parquet(features_path).copy()
+        missing_keys = sorted(set(JOIN_KEYS_V2) - set(wide.columns))
+        if missing_keys:
+            raise ValueError(f"Clean meta input is missing keys: {missing_keys}")
+        if wide.duplicated(JOIN_KEYS_V2).any():
+            raise ValueError("Clean meta input has duplicate (series_id, horizon, fold_id) rows")
+        expected_n_folds = int(cfg.get("expected_n_folds", 3))
+        fold_counts = wide.groupby(["series_id", "horizon"], dropna=False)["fold_id"].nunique()
+        if not fold_counts.eq(expected_n_folds).all():
+            raise ValueError("Clean meta input has an unexpected number of folds for at least one instrument/horizon")
+
+        rmse_cols = sorted(c for c in wide.columns if str(c).startswith("rmse__"))
+        da_cols = sorted(c for c in wide.columns if str(c).startswith("da__"))
+        rmse_models = [c.removeprefix("rmse__") for c in rmse_cols]
+        da_models = [c.removeprefix("da__") for c in da_cols]
+        if rmse_models != da_models:
+            raise ValueError("Clean meta input RMSE and DA model columns do not match")
+        feature_cols = [c for c in wide.columns if c not in JOIN_KEYS_V2 and c not in set(rmse_cols + da_cols)]
+        expected_features = int(cfg.get("expected_feature_count") or len(feature_cols))
+        expected_models = int(cfg.get("expected_model_count") or len(rmse_models))
+        expected_observations = int(cfg.get("expected_observations") or len(wide))
+        if len(wide) != expected_observations or len(feature_cols) != expected_features or len(rmse_models) != expected_models:
+            raise ValueError(
+                "Clean meta input shape contract failed: "
+                f"observations={len(wide)}/{expected_observations}, "
+                f"features={len(feature_cols)}/{expected_features}, models={len(rmse_models)}/{expected_models}"
+            )
+        numeric = wide[feature_cols + rmse_cols + da_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=np.float64)
+        nonfinite = int((~np.isfinite(numeric)).sum())
+        if nonfinite:
+            raise ValueError(f"Clean meta input contains {nonfinite} missing/non-finite numeric cells")
+
+        clean_keys = wide[JOIN_KEYS_V2].drop_duplicates().sort_values(JOIN_KEYS_V2).reset_index(drop=True)
+        feature_keys = features_df[JOIN_KEYS_V2].drop_duplicates().sort_values(JOIN_KEYS_V2).reset_index(drop=True)
+        metric_keys = metrics_df[JOIN_KEYS_V2].drop_duplicates().sort_values(JOIN_KEYS_V2).reset_index(drop=True)
+        if not clean_keys.equals(feature_keys) or not clean_keys.equals(metric_keys):
+            raise ValueError("Clean meta input keys do not exactly match clean feature and forecasting artifacts")
+        source_feature_cols = [c for c in feature_cols if c in features_df.columns]
+        if source_feature_cols != feature_cols:
+            raise ValueError("Clean feature artifact does not contain the exact clean meta feature columns")
+        left_features = wide[JOIN_KEYS_V2 + feature_cols].sort_values(JOIN_KEYS_V2).reset_index(drop=True)
+        right_features = features_df[JOIN_KEYS_V2 + feature_cols].sort_values(JOIN_KEYS_V2).reset_index(drop=True)
+        if not np.array_equal(left_features[feature_cols].to_numpy(), right_features[feature_cols].to_numpy()):
+            raise ValueError("Clean meta feature values differ from the clean feature artifact")
+
+        metric_success = metrics_df[metrics_df.get("status", "success").astype(str) == "success"].copy() if "status" in metrics_df.columns else metrics_df.copy()
+        if metric_success.duplicated(JOIN_KEYS_V2 + ["model_name"]).any():
+            raise ValueError("Clean forecasting artifact has duplicate model scores per observation")
+        for source_metric, prefix in [("rmse", "rmse__"), ("directional_accuracy", "da__")]:
+            pivot = metric_success.pivot(index=JOIN_KEYS_V2, columns="model_name", values=source_metric).reindex(columns=rmse_models)
+            pivot = pivot.sort_index()
+            expected = wide.set_index(JOIN_KEYS_V2)[[f"{prefix}{m}" for m in rmse_models]].sort_index().to_numpy(dtype=np.float64)
+            if pivot.shape != expected.shape or not np.array_equal(pivot.to_numpy(dtype=np.float64), expected):
+                raise ValueError(f"Clean meta {source_metric} values differ from the clean forecasting artifact")
+
+        horizons = [int(x) for x in cfg.get("horizons", [1, 5, 20])]
+        wide = wide[wide["horizon"].astype(int).isin(horizons)].copy()
+        long_parts: list[pd.DataFrame] = []
+        for model_name in rmse_models:
+            part = wide[JOIN_KEYS_V2 + feature_cols].copy()
+            part["model_name"] = model_name
+            part["rmse"] = pd.to_numeric(wide[f"rmse__{model_name}"], errors="raise").to_numpy()
+            part["directional_accuracy"] = pd.to_numeric(wide[f"da__{model_name}"], errors="raise").to_numpy()
+            long_parts.append(part)
+        merged = pd.concat(long_parts, ignore_index=True)
+        merged["object_id"] = merged["series_id"].astype(str) + "|h" + merged["horizon"].astype(str) + "|f" + merged["fold_id"].astype(str)
+        coverage = {
+            "status": "passed",
+            "input_contract": "clean_wide_v1",
+            "meta_input_rows": int(len(wide)),
+            "numeric_feature_count": int(len(feature_cols)),
+            "models_per_object": int(len(rmse_models)),
+            "expected_n_folds": expected_n_folds,
+            "bad_series_horizon_fold_counts": int((~fold_counts.eq(expected_n_folds)).sum()),
+            "non_finite_or_missing_cells": nonfinite,
+            "keys_match_clean_features": True,
+            "keys_match_clean_forecasting": True,
+            "feature_values_match_clean_features": True,
+            "score_values_match_clean_forecasting": True,
+        }
+        return merged, {
+            "join_key": "object_id",
+            "join_keys": JOIN_KEYS_V2,
+            "feature_cols": feature_cols,
+            "meta_inputs_path": str(Path(meta_inputs_path).resolve()),
+            "feature_source_path": str(Path(features_path).resolve()),
+            "forecasting_series_metrics_path": str(Path(metrics_path).resolve()),
+            "forecasting_manifest_path": "",
+            "n_rows": int(len(merged)),
+            "n_series": int(merged["series_id"].nunique()),
+            "horizons": horizons,
+            "models": rmse_models,
+            "coverage_checks": coverage,
+        }
     if not metrics_path or not features_path:
         raise ValueError("meta-modeling v2 requires metrics_path and features_path")
 
@@ -317,6 +448,56 @@ def _build_task_arrays_v2(
     return aligned, aligned[feature_cols].to_numpy(dtype=np.float64), aligned[model_order].to_numpy(dtype=np.float64), model_order
 
 
+def _winner_diagnostics(values: np.ndarray, model_order: list[str], direction: str) -> dict[str, Any]:
+    arr = np.asarray(values, dtype=np.float64)
+    winner_idx = _pick_best_index(arr, direction)
+    best_value = float(arr[winner_idx])
+    tied_best_count = int(np.sum(arr == best_value))
+    ordered = np.sort(arr) if direction == "min" else np.sort(arr)[::-1]
+    margin = float(ordered[1] - ordered[0]) if direction == "min" else float(ordered[0] - ordered[1])
+    return {
+        "best_score_tie_flag": int(tied_best_count > 1),
+        "tied_best_count": tied_best_count,
+        "first_second_score_margin": margin,
+        "final_winner_label": str(model_order[winner_idx]),
+        "winner_idx": int(winner_idx),
+    }
+
+
+def _predict_aligned_probabilities(model: Any | None, constant_class: int | None, X: np.ndarray, n_models: int) -> np.ndarray:
+    if constant_class is not None:
+        probs = np.zeros((len(X), n_models), dtype=np.float64)
+        probs[:, int(constant_class)] = 1.0
+        return probs
+    if model is None:
+        raise ValueError("Classifier model is missing")
+    raw = np.asarray(model.predict_proba(X), dtype=np.float64)
+    classes = np.asarray(getattr(model, "classes_", np.arange(raw.shape[1]))).astype(int)
+    if raw.shape[1] == n_models and np.array_equal(classes, np.arange(n_models)):
+        return raw
+    aligned = np.zeros((raw.shape[0], n_models), dtype=np.float64)
+    for src, cls_idx in enumerate(classes):
+        if 0 <= int(cls_idx) < n_models:
+            aligned[:, int(cls_idx)] = raw[:, src]
+    return aligned
+
+
+def _select_validation_configuration(validation_df: pd.DataFrame, direction: str) -> pd.Series:
+    eligible = validation_df[
+        (validation_df["status"].astype(str) == "success")
+        & np.isfinite(pd.to_numeric(validation_df["achieved_metric"], errors="coerce"))
+    ].copy()
+    if eligible.empty:
+        raise ValueError("No successful validation configuration is available for selection")
+    eligible["_selection_metric"] = pd.to_numeric(eligible["achieved_metric"], errors="raise")
+    ascending = direction == "min"
+    return eligible.sort_values(
+        ["_selection_metric", "config_order"],
+        ascending=[ascending, True],
+        kind="stable",
+    ).iloc[0]
+
+
 def _evaluate_v2(
     *,
     run_id: str,
@@ -331,7 +512,9 @@ def _evaluate_v2(
     y: np.ndarray,
     model_order: list[str],
     train_idx: np.ndarray,
-    test_idx: np.ndarray,
+    eval_idx: np.ndarray,
+    evaluation_partition: str,
+    fixed_idx: int,
     selected_idx: np.ndarray,
     class_probs: np.ndarray,
     top2_idx: np.ndarray,
@@ -340,23 +523,28 @@ def _evaluate_v2(
     decision_rule: str,
     threshold: float | None,
     selected_feature_count: int,
+    config_id: str,
+    config_order: int,
 ) -> tuple[pd.DataFrame, dict[str, Any], dict[str, Any]]:
     direction = _metric_direction(metric)
     y_train = y[train_idx]
-    y_test = y[test_idx]
-    baseline = compute_best_single_baseline(y_train=y_train, y_test=y_test, model_order=model_order, direction=direction)
-    true_cls = np.array([_pick_best_index(row, direction) for row in y_test], dtype=int)
+    y_eval = y[eval_idx]
+    train_mean = np.nanmean(y_train, axis=0)
+    if int(fixed_idx) != _pick_best_index(train_mean, direction):
+        raise ValueError("Fixed model index was not derived from train scores")
+    true_cls = np.array([_pick_best_index(row, direction) for row in y_eval], dtype=int)
     rows: list[dict[str, Any]] = []
-    for pos, obj_idx in enumerate(test_idx):
+    for pos, obj_idx in enumerate(eval_idx):
         actual = y[obj_idx]
         pred_idx = int(selected_idx[pos])
         oracle_idx = int(true_cls[pos])
         achieved = float(actual[pred_idx])
         oracle = float(actual[oracle_idx])
-        base = float(baseline["baseline_values"][pos])
+        base = float(actual[int(fixed_idx)])
         improvement = (base - achieved) if direction == "min" else (achieved - base)
         gap = (achieved - oracle) if direction == "min" else (oracle - achieved)
         obj = object_df.iloc[int(obj_idx)]
+        tie_diag = _winner_diagnostics(actual, model_order, direction)
         rows.append(
             {
                 "run_id": run_id,
@@ -368,6 +556,9 @@ def _evaluate_v2(
                 "target_metric": metric,
                 "feature_set": feature_set,
                 "candidate_set": candidate_set,
+                "config_id": config_id,
+                "config_order": int(config_order),
+                "evaluation_partition": evaluation_partition,
                 "selected_feature_count": int(selected_feature_count),
                 "object_id": str(obj["object_id"]),
                 "series_id": str(obj["series_id"]),
@@ -378,7 +569,7 @@ def _evaluate_v2(
                 "selected_model": model_order[pred_idx],
                 "selected_model_top2": model_order[int(top2_idx[pos])],
                 "oracle_model": model_order[oracle_idx],
-                "best_single_model": baseline["baseline_model"],
+                "best_single_model": model_order[int(fixed_idx)],
                 "achieved_metric": achieved,
                 "oracle_metric": oracle,
                 "baseline_metric": base,
@@ -392,6 +583,10 @@ def _evaluate_v2(
                 "actual_metric_vector_json": json.dumps([float(x) for x in actual]),
                 "model_order_json": json.dumps(model_order),
                 "class_probability_json": json.dumps({m: float(v) for m, v in zip(model_order, class_probs[pos])}),
+                "best_score_tie_flag": tie_diag["best_score_tie_flag"],
+                "tied_best_count": tie_diag["tied_best_count"],
+                "first_second_score_margin": tie_diag["first_second_score_margin"],
+                "final_winner_label": tie_diag["final_winner_label"],
             }
         )
     routing = pd.DataFrame(rows)
@@ -406,12 +601,15 @@ def _evaluate_v2(
         "target_metric": metric,
         "feature_set": feature_set,
         "candidate_set": candidate_set,
+        "config_id": config_id,
+        "config_order": int(config_order),
+        "evaluation_partition": evaluation_partition,
         "selected_feature_count": int(selected_feature_count),
         "balancing_mode": balancing,
         "decision_rule": decision_rule,
         "confidence_threshold": float(threshold) if threshold is not None else np.nan,
-        "n_test_series": int(object_df.iloc[test_idx]["series_id"].nunique()),
-        "n_test_objects": int(len(test_idx)),
+        "n_eval_series": int(object_df.iloc[eval_idx]["series_id"].nunique()),
+        "n_eval_objects": int(len(eval_idx)),
         "achieved_metric": float(routing["achieved_metric"].mean()),
         "best_single_metric": float(routing["baseline_metric"].mean()),
         "oracle_metric": float(routing["oracle_metric"].mean()),
@@ -437,11 +635,550 @@ def _evaluate_v2(
         "balancing_mode": balancing,
         "decision_rule": decision_rule,
         "confidence_threshold": float(threshold) if threshold is not None else np.nan,
-        "best_single_model": baseline["baseline_model"],
-        "best_single_train_mean_metric": float(baseline["train_mean_by_model"][baseline["baseline_idx"]]),
+        "config_id": config_id,
+        "config_order": int(config_order),
+        "evaluation_partition": evaluation_partition,
+        "best_single_model": model_order[int(fixed_idx)],
+        "best_single_train_mean_metric": float(train_mean[int(fixed_idx)]),
         "best_single_test_mean_metric": summary["best_single_metric"],
     }
     return routing, summary, baseline_row
+
+
+def _run_clean_meta_learning_v1(cfg: dict[str, Any], logger: Any) -> dict[str, Any]:
+    """Run leakage-safe validation selection and one frozen test evaluation."""
+    run_name = str(cfg.get("run_name", "clean_meta_learning_v1"))
+    run_id = str(cfg.get("meta", {}).get("run_id", f"{run_name}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"))
+    start_ts = datetime.now(timezone.utc)
+    started = time.perf_counter()
+    output_cfg = _build_v2_output_defaults(cfg)
+    cfg["outputs"] = output_cfg
+    metrics = [_normalize_metric_alias(x) for x in cfg.get("metrics", ["rmse", "directional_accuracy"])]
+    horizons = [int(x) for x in cfg.get("horizons", [1, 5, 20])]
+    classifiers = [str(x) for x in cfg.get("classification_models", [])]
+    if "catboost_classifier" in classifiers and not _catboost_available():
+        logger.warning("CatBoost not installed, skipping catboost_classifier")
+        classifiers = [x for x in classifiers if x != "catboost_classifier"]
+    balancing_modes = [str(x) for x in cfg.get("balancing_modes", ["default", "balanced"])]
+    top_k_values = [int(x) for x in cfg.get("candidate_selection", {}).get("top_k_values", [3, 4, 5, 6])]
+    decision_rules = [str(x) for x in cfg.get("decision_rules", ["top_1", "confidence_fallback"])]
+    thresholds = [float(x) for x in cfg.get("confidence_thresholds", [0.50, 0.60, 0.70, 0.80])]
+    rule_specs: list[tuple[str, float | None]] = []
+    if "top_1" in decision_rules:
+        rule_specs.append(("top_1", None))
+    for threshold in thresholds:
+        name = f"confidence_fallback_{threshold:.2f}"
+        if "confidence_fallback" in decision_rules or name in decision_rules:
+            rule_specs.append((name, threshold))
+    if not rule_specs:
+        raise ValueError("Clean protocol requires at least one existing decision rule")
+
+    seeds = repeat_seeds(
+        {
+            "random_seed": int(cfg.get("random_seed", cfg.get("split", {}).get("random_seed", 42))),
+            "n_repeats": int(cfg.get("n_repeats", cfg.get("split", {}).get("n_repeats", 5))),
+            "random_seeds": cfg.get("split", {}).get("random_seeds", []),
+        }
+    )
+    cfg["split"] = {**dict(cfg.get("split", {})), "n_repeats": len(seeds)}
+    meta_long_df, ds = _load_meta_dataset_v2(cfg)
+    feature_cols = list(ds["feature_cols"])
+    feature_sets = _resolve_clean_feature_sets(cfg, feature_cols)
+
+    validation_summaries: list[dict[str, Any]] = []
+    test_summaries: list[dict[str, Any]] = []
+    test_routing: list[pd.DataFrame] = []
+    split_rows: list[dict[str, Any]] = []
+    candidate_rows: list[pd.DataFrame] = []
+    dataset_rows: list[dict[str, Any]] = []
+    mapping_rows: list[dict[str, Any]] = []
+    selected_feature_rows: list[dict[str, Any]] = []
+    best_config_rows: list[dict[str, Any]] = []
+    best_single_rows: list[dict[str, Any]] = []
+    probability_rows: list[dict[str, Any]] = []
+    winner_diag_rows: list[dict[str, Any]] = []
+    failed = 0
+    # Keep CatBoost's Windows train directories short.  Its native backend can
+    # fail to decode paths near MAX_PATH; the configured output directory is
+    # already unique per experiment, so adding the run id here is unnecessary.
+    catboost_root = Path(str(cfg.get("output_dir", "artifacts/meta_modeling/clean_meta_learning_v1"))).resolve() / "_catboost"
+    catboost_root.mkdir(parents=True, exist_ok=True)
+
+    for feature_set_name, base_feature_cols in feature_sets.items():
+        for horizon in horizons:
+            horizon_df = meta_long_df[meta_long_df["horizon"].astype(int) == int(horizon)].copy()
+            object_base = horizon_df[["object_id", "series_id", "horizon", "fold_id", *base_feature_cols]].drop_duplicates("object_id").reset_index(drop=True)
+            for metric in metrics:
+                direction = _metric_direction(metric)
+                for repeat_id, seed in enumerate(seeds, start=1):
+                    base_train_idx, base_val_idx, base_test_idx, split_meta = _split_object_indices_by_series(object_base, cfg, int(seed))
+                    partition_by_object: dict[str, str] = {}
+                    for partition, indices in (("train", base_train_idx), ("validation", base_val_idx), ("test", base_test_idx)):
+                        for idx in indices:
+                            partition_by_object[str(object_base.iloc[int(idx)]["object_id"])] = partition
+                    for _, row in object_base.iterrows():
+                        split_rows.append(
+                            {
+                                "run_id": run_id,
+                                "repeat_id": int(repeat_id),
+                                "split_seed": int(seed),
+                                "horizon": int(horizon),
+                                "target_metric": metric,
+                                "feature_set": feature_set_name,
+                                "object_id": str(row["object_id"]),
+                                "series_id": str(row["series_id"]),
+                                "fold_id": int(row["fold_id"]),
+                                "split": partition_by_object[str(row["object_id"])],
+                            }
+                        )
+                    train_object_ids = set(object_base.iloc[base_train_idx]["object_id"].astype(str))
+                    train_long_df = horizon_df[horizon_df["object_id"].astype(str).isin(train_object_ids)].copy()
+                    task_validation_rows: list[dict[str, Any]] = []
+                    fitted_bundles: dict[int, dict[str, Any]] = {}
+                    config_order = 0
+                    task_diag_start = len(winner_diag_rows)
+
+                    for top_k in top_k_values:
+                        cdf = _candidate_set_from_train_v2(train_long_df, horizon=horizon, metric=metric, top_k=top_k)
+                        cdf["run_id"] = run_id
+                        cdf["repeat_id"] = int(repeat_id)
+                        cdf["split_seed"] = int(seed)
+                        cdf["feature_set"] = feature_set_name
+                        candidate_rows.append(cdf)
+                        candidate_models = cdf.sort_values("candidate_rank", kind="stable")["model_name"].astype(str).tolist()
+                        object_df, X, y, model_order = _build_task_arrays_v2(
+                            meta_long_df,
+                            horizon=horizon,
+                            metric=metric,
+                            feature_cols=base_feature_cols,
+                            candidate_models=candidate_models,
+                        )
+                        train_idx, val_idx, test_idx, candidate_split_meta = _split_object_indices_by_series(object_df, cfg, int(seed))
+                        if not len(val_idx):
+                            raise ValueError("Validation partition is empty; clean selection cannot run")
+                        y_train_cls = np.array([_pick_best_index(row, direction) for row in y[train_idx]], dtype=int)
+                        fixed_idx = _pick_best_index(np.nanmean(y[train_idx], axis=0), direction)
+                        feat_idx = np.arange(len(base_feature_cols), dtype=int)
+                        selected_names = list(base_feature_cols)
+                        if feature_set_name == "selected":
+                            feat_idx, selected_names, _ = _train_only_feature_selection(X[train_idx], y_train_cls, base_feature_cols, cfg)
+                        X_train = X[train_idx][:, feat_idx]
+                        X_validation = X[val_idx][:, feat_idx]
+                        candidate_set = str(cdf["candidate_set"].iloc[0])
+                        dataset_rows.append(
+                            {
+                                "run_id": run_id,
+                                "repeat_id": int(repeat_id),
+                                "split_seed": int(seed),
+                                "horizon": int(horizon),
+                                "target_metric": metric,
+                                "feature_set": feature_set_name,
+                                "candidate_set": candidate_set,
+                                "candidate_size": int(len(model_order)),
+                                "n_objects": int(len(object_df)),
+                                "n_series": int(object_df["series_id"].nunique()),
+                                "n_train_objects": int(len(train_idx)),
+                                "n_validation_objects": int(len(val_idx)),
+                                "n_test_objects": int(len(test_idx)),
+                                "n_features": int(len(selected_names)),
+                                "split_overlap_series": int(candidate_split_meta["overlap_series"]),
+                                "top_k_ranking_scope": "train_only",
+                                "fixed_model_scope": "train_only",
+                                "classifier_fit_scope": "train_only",
+                                "fixed_model": model_order[int(fixed_idx)],
+                                "feature_columns_json": json.dumps(selected_names),
+                                "model_order_json": json.dumps(model_order),
+                            }
+                        )
+                        for class_idx, model_label in enumerate(model_order):
+                            mapping_rows.append(
+                                {
+                                    "run_id": run_id,
+                                    "repeat_id": int(repeat_id),
+                                    "split_seed": int(seed),
+                                    "horizon": int(horizon),
+                                    "target_metric": metric,
+                                    "feature_set": feature_set_name,
+                                    "candidate_set": candidate_set,
+                                    "class_idx": int(class_idx),
+                                    "model_name": model_label,
+                                }
+                            )
+                        selected_feature_rows.append(
+                            {
+                                "run_id": run_id,
+                                "repeat_id": int(repeat_id),
+                                "split_seed": int(seed),
+                                "horizon": int(horizon),
+                                "target_metric": metric,
+                                "feature_set": feature_set_name,
+                                "candidate_set": candidate_set,
+                                "selected_feature_count": int(len(selected_names)),
+                                "selected_features_json": json.dumps(selected_names),
+                                "fitted_on_partition": "train",
+                            }
+                        )
+                        index_partitions = {
+                            **{int(i): "train" for i in train_idx},
+                            **{int(i): "validation" for i in val_idx},
+                            **{int(i): "test" for i in test_idx},
+                        }
+                        for obj_idx, partition in sorted(index_partitions.items()):
+                            obj = object_df.iloc[obj_idx]
+                            diag = _winner_diagnostics(y[obj_idx], model_order, direction)
+                            winner_diag_rows.append(
+                                {
+                                    "run_id": run_id,
+                                    "repeat_id": int(repeat_id),
+                                    "split_seed": int(seed),
+                                    "horizon": int(horizon),
+                                    "target_metric": metric,
+                                    "feature_set": feature_set_name,
+                                    "candidate_set": candidate_set,
+                                    "object_id": str(obj["object_id"]),
+                                    "series_id": str(obj["series_id"]),
+                                    "fold_id": int(obj["fold_id"]),
+                                    "partition": partition,
+                                    "best_score_tie_flag": diag["best_score_tie_flag"],
+                                    "tied_best_count": diag["tied_best_count"],
+                                    "first_second_score_margin": diag["first_second_score_margin"],
+                                    "final_winner_label": diag["final_winner_label"],
+                                    "selected_by_validation": 0,
+                                }
+                            )
+
+                        for clf in classifiers:
+                            for balancing in balancing_modes:
+                                model: Any | None = None
+                                constant_class: int | None = None
+                                try:
+                                    if len(np.unique(y_train_cls)) < 2:
+                                        constant_class = int(y_train_cls[0])
+                                    else:
+                                        train_dir = str(catboost_root / f"fs-{feature_set_name}_r{repeat_id}_h{horizon}_{metric}_k{top_k}_{balancing}") if clf == "catboost_classifier" else None
+                                        model = build_meta_classifier(model_name=clf, cfg=cfg, balancing_mode=balancing, catboost_train_dir=train_dir)
+                                        model.fit(X_train, y_train_cls)
+                                    val_probs = _predict_aligned_probabilities(model, constant_class, X_validation, len(model_order))
+                                    val_top1 = np.argmax(val_probs, axis=1).astype(int)
+                                    val_top2 = np.argsort(val_probs, axis=1)[:, -2] if val_probs.shape[1] >= 2 else val_top1
+                                    val_conf = np.max(val_probs, axis=1)
+                                    for rule, threshold in rule_specs:
+                                        current_order = config_order
+                                        config_order += 1
+                                        config_id = f"{candidate_set}|{clf}|{balancing}|{rule}|{feature_set_name}"
+                                        selected = val_top1 if threshold is None else np.where(val_conf >= float(threshold), val_top1, fixed_idx).astype(int)
+                                        _, summary, _ = _evaluate_v2(
+                                            run_id=run_id,
+                                            repeat_id=repeat_id,
+                                            seed=int(seed),
+                                            model_name=clf,
+                                            horizon=horizon,
+                                            metric=metric,
+                                            feature_set=feature_set_name,
+                                            candidate_set=candidate_set,
+                                            object_df=object_df,
+                                            y=y,
+                                            model_order=model_order,
+                                            train_idx=train_idx,
+                                            eval_idx=val_idx,
+                                            evaluation_partition="validation",
+                                            fixed_idx=fixed_idx,
+                                            selected_idx=selected,
+                                            class_probs=val_probs,
+                                            top2_idx=val_top2,
+                                            confidence=val_conf,
+                                            balancing=balancing,
+                                            decision_rule=rule,
+                                            threshold=threshold,
+                                            selected_feature_count=len(selected_names),
+                                            config_id=config_id,
+                                            config_order=current_order,
+                                        )
+                                        summary["selection_metric"] = "achieved_metric"
+                                        summary["selection_direction"] = direction
+                                        summary["selected_by_validation"] = 0
+                                        task_validation_rows.append(summary)
+                                        fitted_bundles[current_order] = {
+                                            "model": model,
+                                            "constant_class": constant_class,
+                                            "object_df": object_df,
+                                            "X": X,
+                                            "y": y,
+                                            "model_order": model_order,
+                                            "train_idx": train_idx,
+                                            "val_idx": val_idx,
+                                            "test_idx": test_idx,
+                                            "feat_idx": feat_idx,
+                                            "fixed_idx": int(fixed_idx),
+                                            "classifier": clf,
+                                            "balancing": balancing,
+                                            "decision_rule": rule,
+                                            "threshold": threshold,
+                                            "feature_set": feature_set_name,
+                                            "candidate_set": candidate_set,
+                                            "selected_names": selected_names,
+                                            "config_id": config_id,
+                                        }
+                                except Exception as exc:
+                                    for rule, threshold in rule_specs:
+                                        current_order = config_order
+                                        config_order += 1
+                                        task_validation_rows.append(
+                                            {
+                                                "run_id": run_id,
+                                                "repeat_id": int(repeat_id),
+                                                "split_seed": int(seed),
+                                                "model": clf,
+                                                "horizon": int(horizon),
+                                                "target_metric": metric,
+                                                "feature_set": feature_set_name,
+                                                "candidate_set": candidate_set,
+                                                "balancing_mode": balancing,
+                                                "decision_rule": rule,
+                                                "confidence_threshold": threshold,
+                                                "config_id": f"{candidate_set}|{clf}|{balancing}|{rule}|{feature_set_name}",
+                                                "config_order": current_order,
+                                                "evaluation_partition": "validation",
+                                                "status": "failed",
+                                                "notes": f"{exc.__class__.__name__}: {exc}",
+                                                "selected_by_validation": 0,
+                                            }
+                                        )
+                                        failed += 1
+
+                    task_validation_df = pd.DataFrame(task_validation_rows)
+                    chosen = _select_validation_configuration(task_validation_df, direction)
+                    chosen_order = int(chosen["config_order"])
+                    for row in task_validation_rows:
+                        if int(row["config_order"]) == chosen_order:
+                            row["selected_by_validation"] = 1
+                    validation_summaries.extend(task_validation_rows)
+                    selected_record = {k: v for k, v in chosen.to_dict().items() if k != "_selection_metric"}
+                    selected_record["selected_by_validation"] = 1
+                    selected_record["validation_metric"] = float(chosen["achieved_metric"])
+                    selected_record["selection_scope"] = "repeat_x_horizon_x_metric"
+                    selected_record["test_used_for_selection"] = False
+                    best_config_rows.append(selected_record)
+
+                    bundle = fitted_bundles[chosen_order]
+                    for diag_row in winner_diag_rows[task_diag_start:]:
+                        if diag_row["candidate_set"] == bundle["candidate_set"]:
+                            diag_row["selected_by_validation"] = 1
+                    test_idx = bundle["test_idx"]
+                    X_test = bundle["X"][test_idx][:, bundle["feat_idx"]]
+                    test_probs = _predict_aligned_probabilities(bundle["model"], bundle["constant_class"], X_test, len(bundle["model_order"]))
+                    test_top1 = np.argmax(test_probs, axis=1).astype(int)
+                    test_top2 = np.argsort(test_probs, axis=1)[:, -2] if test_probs.shape[1] >= 2 else test_top1
+                    test_conf = np.max(test_probs, axis=1)
+                    threshold = bundle["threshold"]
+                    test_selected = test_top1 if threshold is None else np.where(test_conf >= float(threshold), test_top1, bundle["fixed_idx"]).astype(int)
+                    routing, test_summary, baseline_row = _evaluate_v2(
+                        run_id=run_id,
+                        repeat_id=repeat_id,
+                        seed=int(seed),
+                        model_name=bundle["classifier"],
+                        horizon=horizon,
+                        metric=metric,
+                        feature_set=bundle["feature_set"],
+                        candidate_set=bundle["candidate_set"],
+                        object_df=bundle["object_df"],
+                        y=bundle["y"],
+                        model_order=bundle["model_order"],
+                        train_idx=bundle["train_idx"],
+                        eval_idx=test_idx,
+                        evaluation_partition="test",
+                        fixed_idx=bundle["fixed_idx"],
+                        selected_idx=test_selected,
+                        class_probs=test_probs,
+                        top2_idx=test_top2,
+                        confidence=test_conf,
+                        balancing=bundle["balancing"],
+                        decision_rule=bundle["decision_rule"],
+                        threshold=threshold,
+                        selected_feature_count=len(bundle["selected_names"]),
+                        config_id=bundle["config_id"],
+                        config_order=chosen_order,
+                    )
+                    routing["selected_by_validation"] = 1
+                    routing["validation_metric"] = float(chosen["achieved_metric"])
+                    test_summary["selected_by_validation"] = 1
+                    test_summary["validation_metric"] = float(chosen["achieved_metric"])
+                    test_summary["test_evaluations_for_task"] = 1
+                    test_routing.append(routing)
+                    test_summaries.append(test_summary)
+                    best_single_rows.append(baseline_row)
+                    for pos, obj_idx in enumerate(test_idx):
+                        obj = bundle["object_df"].iloc[int(obj_idx)]
+                        probability_rows.append(
+                            {
+                                "run_id": run_id,
+                                "repeat_id": int(repeat_id),
+                                "split_seed": int(seed),
+                                "horizon": int(horizon),
+                                "target_metric": metric,
+                                "config_id": bundle["config_id"],
+                                "object_id": str(obj["object_id"]),
+                                "series_id": str(obj["series_id"]),
+                                "fold_id": int(obj["fold_id"]),
+                                "evaluation_partition": "test",
+                                "predicted_top1_model": bundle["model_order"][int(test_top1[pos])],
+                                "predicted_top2_model": bundle["model_order"][int(test_top2[pos])],
+                                "confidence": float(test_conf[pos]),
+                                "class_probability_json": json.dumps({m: float(v) for m, v in zip(bundle["model_order"], test_probs[pos])}),
+                            }
+                        )
+                    logger.info(
+                        "clean selection repeat=%d horizon=%d metric=%s config=%s validation=%.8g test=%.8g",
+                        repeat_id,
+                        horizon,
+                        metric,
+                        bundle["config_id"],
+                        float(chosen["achieved_metric"]),
+                        float(test_summary["achieved_metric"]),
+                    )
+
+    validation_df = pd.DataFrame(validation_summaries)
+    selected_test_df = pd.DataFrame(test_summaries)
+    routing_df = pd.concat(test_routing, ignore_index=True) if test_routing else pd.DataFrame()
+    split_df = pd.DataFrame(split_rows)
+    candidate_df = pd.concat(candidate_rows, ignore_index=True) if candidate_rows else pd.DataFrame()
+    dataset_df = pd.DataFrame(dataset_rows)
+    mapping_df = pd.DataFrame(mapping_rows)
+    selected_features_df = pd.DataFrame(selected_feature_rows)
+    best_cfg_df = pd.DataFrame(best_config_rows)
+    best_single_df = pd.DataFrame(best_single_rows)
+    probs_df = pd.DataFrame(probability_rows)
+    winner_diag_df = pd.DataFrame(winner_diag_rows)
+    repeat_agg_df = pd.DataFrame()
+    if not selected_test_df.empty:
+        repeat_agg_df = selected_test_df.groupby(["horizon", "target_metric"], sort=True).agg(
+            n_repeats=("repeat_id", "nunique"),
+            achieved_mean=("achieved_metric", "mean"),
+            achieved_std=("achieved_metric", "std"),
+            best_single_mean=("best_single_metric", "mean"),
+            oracle_mean=("oracle_metric", "mean"),
+            improvement_mean=("improvement_vs_best_single", "mean"),
+            gap_mean=("gap_to_oracle", "mean"),
+        ).reset_index()
+    comparison_df = repeat_agg_df.copy()
+
+    for value in output_cfg.values():
+        Path(str(value)).resolve().parent.mkdir(parents=True, exist_ok=True)
+    dataset_df.to_csv(output_cfg["meta_dataset_summary_csv_path"], index=False)
+    dataset_df.to_parquet(output_cfg["meta_dataset_summary_parquet_path"], index=False)
+    mapping_df.to_csv(output_cfg["model_order_mapping_csv_path"], index=False)
+    routing_df.to_csv(output_cfg["routing_rows_csv_path"], index=False)
+    routing_df.to_parquet(output_cfg["routing_rows_parquet_path"], index=False)
+    validation_df.to_csv(output_cfg["task_results_csv_path"], index=False)
+    validation_df.to_parquet(output_cfg["task_results_parquet_path"], index=False)
+    selected_test_df.to_csv(output_cfg["selected_test_results_csv_path"], index=False)
+    split_df.to_csv(output_cfg["split_assignments_csv_path"], index=False)
+    repeat_agg_df.to_csv(output_cfg["repeat_aggregated_results_csv_path"], index=False)
+    best_single_df.to_csv(output_cfg["best_single_baseline_by_repeat_csv_path"], index=False)
+    comparison_df.to_csv(output_cfg["comparison_table_csv_path"], index=False)
+    candidate_df.to_csv(output_cfg["candidate_models_csv_path"], index=False)
+    probs_df.to_csv(output_cfg["classification_probabilities_csv_path"], index=False)
+    selected_features_df.to_csv(output_cfg["selected_features_csv_path"], index=False)
+    best_cfg_df.to_csv(output_cfg["best_config_per_task_csv_path"], index=False)
+    winner_diag_df.to_csv(output_cfg["winner_label_diagnostics_csv_path"], index=False)
+    feature_list_df = pd.concat(
+        [pd.DataFrame({"feature_name": cols, "feature_set": name}) for name, cols in feature_sets.items()],
+        ignore_index=True,
+    )
+    feature_list_df.to_csv(output_cfg["feature_list_csv_path"], index=False)
+    pd.DataFrame().to_csv(output_cfg["per_class_metrics_csv_path"], index=False)
+    pd.DataFrame().to_csv(output_cfg["confusion_matrix_csv_path"], index=False)
+    winner_diag_df.groupby(["repeat_id", "horizon", "target_metric", "candidate_set", "partition", "selected_by_validation", "final_winner_label"], dropna=False).size().reset_index(name="n_objects").to_csv(output_cfg["class_distribution_csv_path"], index=False)
+    (routing_df.groupby(["horizon", "target_metric", "config_id"], dropna=False)["confidence"].agg(["count", "mean", "min", "max"]).reset_index() if not routing_df.empty else pd.DataFrame()).to_csv(output_cfg["confidence_summary_csv_path"], index=False)
+    candidate_df.groupby(["repeat_id", "split_seed", "horizon", "target_metric", "feature_set", "candidate_set"], dropna=False).size().reset_index(name="n_models").to_csv(output_cfg["candidate_filtering_summary_csv_path"], index=False)
+    dataset_df.groupby(["horizon", "target_metric", "feature_set"], dropna=False).agg(n_objects=("n_objects", "max"), n_features=("n_features", "max")).reset_index().to_csv(output_cfg["feature_regime_summary_csv_path"], index=False)
+    routing_df.head(100).to_csv(output_cfg["confident_examples_csv_path"], index=False)
+    with Path(output_cfg["feature_manifest_json_path"]).open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "feature_scope": "clean_fold_aware_train_only",
+                "available_clean_features": feature_cols,
+                "feature_sets": feature_sets,
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
+    with Path(output_cfg["coverage_checks_json_path"]).open("w", encoding="utf-8") as f:
+        json.dump(ds["coverage_checks"], f, ensure_ascii=False, indent=2)
+    snapshot = {
+        **cfg,
+        "resolved_run_id": run_id,
+        "resolved_timestamp_utc": start_ts.isoformat(),
+        "resolved_git_commit": get_git_commit(Path(cfg["meta"]["project_root"])),
+        "resolved_inputs": {
+            "meta_inputs_path": ds["meta_inputs_path"],
+            "metrics_path": ds["forecasting_series_metrics_path"],
+            "features_path": ds["feature_source_path"],
+        },
+        "resolved_outputs": output_cfg,
+        "selection_protocol": "train_fit_validation_select_frozen_test_v1",
+    }
+    with Path(output_cfg["resolved_config_snapshot_path"]).open("w", encoding="utf-8") as f:
+        yaml.safe_dump(snapshot, f, sort_keys=False, allow_unicode=False)
+    excel_path = export_meta_modeling_excel(
+        excel_path=output_cfg["excel_report_path"],
+        summary_df=repeat_agg_df,
+        task_results_df=validation_df,
+        routing_df=routing_df,
+        model_order_df=mapping_df,
+        dataset_summary_df=dataset_df,
+        split_df=split_df,
+        repeat_agg_df=repeat_agg_df,
+        feature_list_df=feature_list_df,
+        best_single_repeat_df=best_single_df,
+        comparison_df=comparison_df,
+        candidates_df=candidate_df,
+        prediction_examples_df=routing_df.head(100),
+        classification_probabilities_df=probs_df,
+    )
+    manifest = {
+        "run_id": run_id,
+        "stage": str(cfg.get("stage", "clean_meta_learning_v1")),
+        "timestamp_start": start_ts.isoformat(),
+        "timestamp_end": datetime.now(timezone.utc).isoformat(),
+        "git_commit": get_git_commit(Path(cfg["meta"]["project_root"])),
+        "config_path": cfg["meta"]["config_path"],
+        "inputs_used": snapshot["resolved_inputs"],
+        "outputs": output_cfg,
+        "split_seeds": seeds,
+        "selection_protocol": {
+            "unit": "repeat_x_horizon_x_metric",
+            "train_uses": ["top_k", "fixed_model", "winner_labels", "classifier_fit", "class_weights", "fitted_transformations"],
+            "validation_uses": ["configuration_selection_by_final_forecasting_metric"],
+            "test_uses": ["single_frozen_configuration_evaluation"],
+            "test_used_for_selection": False,
+            "tie_break": "metric_then_config_order",
+        },
+        "summary": {
+            "validation_configurations": int(len(validation_df)),
+            "selected_configurations": int(len(best_cfg_df)),
+            "test_evaluations": int(len(selected_test_df)),
+            "failed_configurations": int(failed),
+            "elapsed_seconds": float(time.perf_counter() - started),
+        },
+    }
+    manifest_path = write_manifest(manifest=manifest, manifests_dir=cfg["artifacts"]["manifests"], run_id=run_id)
+    return {
+        "run_id": run_id,
+        "manifest_path": str(manifest_path),
+        "comparison_table_path": output_cfg["comparison_table_csv_path"],
+        "candidate_models_path": output_cfg["candidate_models_csv_path"],
+        "classification_probabilities_path": output_cfg["classification_probabilities_csv_path"],
+        "excel_report_path": str(excel_path),
+        "tasks_total": int(len(validation_df)),
+        "tasks_success": int((validation_df.get("status", pd.Series(dtype=str)) == "success").sum()),
+        "best_config_path": output_cfg["best_config_per_task_csv_path"],
+        "selected_test_results_path": output_cfg["selected_test_results_csv_path"],
+        "winner_label_diagnostics_path": output_cfg["winner_label_diagnostics_csv_path"],
+        "dataset_summary": ds,
+        "elapsed_seconds": float(time.perf_counter() - started),
+    }
 
 
 def _run_meta_modeling_experiments_v2(cfg: dict[str, Any], logger: Any) -> dict[str, Any]:
@@ -536,7 +1273,7 @@ def _run_meta_modeling_experiments_v2(cfg: dict[str, Any], logger: Any) -> dict[
                                     context = f"horizon={horizon} metric={metric} classifier={clf} candidate_set={str(cdf['candidate_set'].iloc[0])} feature_set={feature_set_name} balancing={balancing} repeat={repeat_id}"
                                     try:
                                         config_started = time.perf_counter()
-                                        train_dir = str(catboost_root / f"{clf}_{balancing}_h{horizon}_{metric}_r{repeat_id}") if clf == "catboost_classifier" else None
+                                        train_dir = str(catboost_root / f"fs-{feature_set_name}_r{repeat_id}_h{horizon}_{metric}_{balancing}") if clf == "catboost_classifier" else None
                                         model = build_meta_classifier(model_name=clf, cfg=cfg, balancing_mode=balancing, catboost_train_dir=train_dir)
                                         if len(np.unique(y_train_cls)) < 2:
                                             class_probs = np.zeros((Xte.shape[0], len(model_order)), dtype=np.float64)
@@ -559,7 +1296,8 @@ def _run_meta_modeling_experiments_v2(cfg: dict[str, Any], logger: Any) -> dict[
                                             probs_rows.append({"run_id": run_id, "repeat_id": int(repeat_id), "split_seed": int(seed), "method": "classification", "model": clf, "horizon": int(horizon), "target_metric": metric, "feature_set": feature_set_name, "candidate_set": str(cdf["candidate_set"].iloc[0]), "balancing_mode": balancing, "object_id": str(obj["object_id"]), "series_id": str(obj["series_id"]), "fold_id": int(obj["fold_id"]), "predicted_top1_model": model_order[int(top1[pos])], "predicted_top2_model": model_order[int(top2[pos])], "confidence": float(conf[pos]), "class_probability_json": json.dumps({m: float(v) for m, v in zip(model_order, class_probs[pos])})})
                                         for rule, threshold in rule_specs:
                                             selected = top1 if threshold is None else np.where(conf >= float(threshold), top1, baseline_idx).astype(int)
-                                            rdf, summ, brow = _evaluate_v2(run_id=run_id, repeat_id=repeat_id, seed=int(seed), model_name=clf, horizon=horizon, metric=metric, feature_set=feature_set_name, candidate_set=str(cdf["candidate_set"].iloc[0]), object_df=object_df, y=y, model_order=model_order, train_idx=train_idx, test_idx=test_idx, selected_idx=selected, class_probs=class_probs, top2_idx=top2, confidence=conf, balancing=balancing, decision_rule=rule, threshold=threshold, selected_feature_count=len(selected_names))
+                                            config_id = f"{cdf['candidate_set'].iloc[0]}|{clf}|{balancing}|{rule}|{feature_set_name}"
+                                            rdf, summ, brow = _evaluate_v2(run_id=run_id, repeat_id=repeat_id, seed=int(seed), model_name=clf, horizon=horizon, metric=metric, feature_set=feature_set_name, candidate_set=str(cdf["candidate_set"].iloc[0]), object_df=object_df, y=y, model_order=model_order, train_idx=train_idx, eval_idx=test_idx, evaluation_partition="test", fixed_idx=baseline_idx, selected_idx=selected, class_probs=class_probs, top2_idx=top2, confidence=conf, balancing=balancing, decision_rule=rule, threshold=threshold, selected_feature_count=len(selected_names), config_id=config_id, config_order=processed)
                                             summ["elapsed_seconds"] = float(time.perf_counter() - config_started)
                                             routing_rows.append(rdf)
                                             summary_rows.append(summ)
@@ -698,6 +1436,8 @@ def _run_meta_modeling_experiments_v2(cfg: dict[str, Any], logger: Any) -> dict[
 
 
 def run_meta_modeling_experiments(cfg: dict[str, Any], logger: Any) -> dict[str, Any]:
+    if str(cfg.get("inputs", {}).get("meta_inputs_path", "")).strip():
+        return _run_clean_meta_learning_v1(cfg=cfg, logger=logger)
     if str(cfg.get("feature_scope", "")).strip() == "fold_aware_train_only":
         return _run_meta_modeling_experiments_v2(cfg=cfg, logger=logger)
 

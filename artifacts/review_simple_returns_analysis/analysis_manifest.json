@@ -1,0 +1,26 @@
+{
+  "input_dir": "D:\\Projects\\TS_fcst\\artifacts\\forecasting\\forecasting_benchmark_v2",
+  "output_dir": "D:\\Projects\\TS_fcst\\artifacts\\review_simple_returns_analysis",
+  "created_files": [
+    "best_models_by_horizon_metric.csv",
+    "figures\\case_directional_accuracy_bad_RU_TGKN_h20_f1.png",
+    "figures\\case_directional_accuracy_best_US_amp.us_h20_f1.png",
+    "figures\\case_directional_accuracy_median_US_iht.us_h1_f2.png",
+    "figures\\case_rmse_bad_RU_GLTR_h20_f2.png",
+    "figures\\case_rmse_best_US_bfo.us_h1_f3.png",
+    "figures\\case_rmse_median_RU_IRAO_h5_f1.png",
+    "figures\\two_model_rmse_vs_da_1_RU_GLTR_h20_f2.png",
+    "figures\\two_model_rmse_vs_da_2_RU_IRAO_h5_f1.png",
+    "log_metrics_by_horizon_model.csv",
+    "log_task_metrics_from_artifact.csv",
+    "max_rank_shifts.csv",
+    "mean_metrics_by_horizon.csv",
+    "mean_metrics_overall.csv",
+    "rank_correlations.csv",
+    "schema_metrics_long.csv",
+    "schema_predictions.csv",
+    "selected_plot_cases.csv",
+    "simple_metrics_by_horizon_model.csv",
+    "simple_task_metrics.csv"
+  ]
+}

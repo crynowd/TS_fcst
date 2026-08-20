@@ -29,14 +29,14 @@ selected_architectures:
     - naive_mean
     - ridge_lag
   candidate_ids:
-    - esn_g004
-    - chaotic_esn_g003
+    - esn_g001
+    - chaotic_esn_g002
     - transient_chaotic_esn_g002
     - vanilla_mlp_g004
     - chaotic_mlp_g003
     - logistic_g006
     - lstm_g001
-    - chaotic_lstm_g003
+    - chaotic_lstm_g002
 
 horizons:
   - 1

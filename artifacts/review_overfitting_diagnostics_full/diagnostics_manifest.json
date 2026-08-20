@@ -1,0 +1,14 @@
+{
+  "generated_at_utc": "2026-06-15T06:13:54Z",
+  "git_commit": "2857e0f13492ace17849c71ae5e46ef3e12ae5c3",
+  "config_path": "D:\\Projects\\TS_fcst\\configs\\forecasting_benchmark_v2.yaml",
+  "outputs": {
+    "raw_csv": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\raw_diagnostics.csv",
+    "raw_parquet": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\raw_diagnostics.parquet",
+    "xlsx": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\chaotic_overfitting_diagnostics_full.xlsx",
+    "md": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\chaotic_overfitting_diagnostics_full.md",
+    "state": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\progress_state.json",
+    "checkpoint_parquet": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\raw_diagnostics_checkpoint.parquet",
+    "checkpoint_csv": "D:\\Projects\\TS_fcst\\artifacts\\review_overfitting_diagnostics_full\\raw_diagnostics_checkpoint.csv"
+  }
+}

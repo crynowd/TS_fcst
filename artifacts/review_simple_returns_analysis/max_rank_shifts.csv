@@ -1,0 +1,10 @@
+horizon,metric,model_name,rank_log,rank_simple,rank_shift_abs
+1,rmse,transient_chaotic_esn,7.0,6.0,1.0
+1,mae,chaotic_esn,11.0,11.0,0.0
+1,directional_accuracy,chaotic_esn,7.0,7.0,0.0
+5,rmse,vanilla_mlp,5.0,7.0,2.0
+5,mae,chaotic_esn,11.0,11.0,0.0
+5,directional_accuracy,chaotic_esn,6.0,6.0,0.0
+20,rmse,vanilla_mlp,6.0,10.0,4.0
+20,mae,vanilla_mlp,5.0,9.0,4.0
+20,directional_accuracy,chaotic_esn,5.0,5.0,0.0

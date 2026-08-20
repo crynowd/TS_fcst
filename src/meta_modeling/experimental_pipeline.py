@@ -1221,4 +1221,8 @@ def run_meta_modeling_experiments(cfg: dict[str, Any], logger: Any) -> dict[str,
     }
 
 
-from src.meta_modeling.classification_pipeline import run_meta_modeling_experiments as run_meta_modeling_experiments
+def run_meta_modeling_experiments(cfg: dict[str, Any], logger: Any) -> dict[str, Any]:
+    """Lazy dispatch avoids the historical circular import with the classification pipeline."""
+    from src.meta_modeling.classification_pipeline import run_meta_modeling_experiments as _run
+
+    return _run(cfg=cfg, logger=logger)

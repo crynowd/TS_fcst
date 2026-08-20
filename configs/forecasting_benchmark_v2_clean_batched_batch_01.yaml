@@ -1,0 +1,206 @@
+stage: forecasting_benchmark_v2
+random_seed: 2026
+dataset_version: log_returns_v1
+device: auto
+resume: true
+save_metrics: true
+save_predictions: true
+progress_every_n: 20
+data:
+  source_path: artifacts/processed/log_returns_v1.parquet
+  dataset_profile: core_balanced
+  max_series: 418
+  dataset_limit: 418
+  series_selection_mode: first_n
+  series_ids: []
+models:
+  active:
+  - naive_zero
+  - naive_mean
+  - ridge_lag
+  inactive_but_supported: []
+selected_architectures:
+  source_config: configs/forecasting_selected_architectures_v1.yaml
+  baselines_keep:
+  - naive_zero
+  - naive_mean
+  - ridge_lag
+  candidate_ids:
+  - esn_g001
+  - chaotic_esn_g002
+  - transient_chaotic_esn_g002
+  - vanilla_mlp_g004
+  - chaotic_mlp_g003
+  - logistic_g006
+  - lstm_g001
+  - chaotic_lstm_g002
+horizons:
+- 1
+- 5
+- 20
+window_sizes:
+  '1': 64
+  '5': 32
+  '20': 16
+validation:
+  method: rolling_origin
+  n_folds: 3
+timeouts:
+  max_train_seconds_per_task: 300
+  max_predict_seconds_per_task: 30
+training:
+  max_epochs: 20
+  early_stopping_patience: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0
+  by_model:
+    vanilla_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_logistic_net:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+model_overrides:
+  ridge_lag:
+    alpha: 1.0
+filters:
+  active_models: []
+  horizons: []
+  series_ids:
+  - RU:ABIO
+  - RU:ABRD
+  - RU:AFKS
+  - RU:AFLT
+  - RU:AGRO
+  - RU:AKRN
+  - RU:ALRS
+  - RU:AMEZ
+  - RU:APTK
+  - RU:AQUA
+  - RU:ARSA
+  - RU:ASSB
+  - RU:AVAN
+  - RU:BANE
+  - RU:BANEP
+  - RU:BELU
+  - RU:BISVP
+  - RU:BLNG
+  - RU:BRZL
+  - RU:BSPB
+  - RU:CBOM
+  - RU:CHGZ
+  - RU:CHKZ
+  - RU:CHMF
+  - RU:CHMK
+  - RU:CNTL
+  - RU:CNTLP
+  - RU:DIOD
+  - RU:DSKY
+  - RU:DVEC
+  - RU:DZRD
+  - RU:DZRDP
+  - RU:EELT
+  - RU:ELFV
+  - RU:FEES
+  - RU:FESH
+  - RU:FIVE
+  - RU:GAZA
+  - RU:GAZAP
+  - RU:GAZP
+  - RU:GCHE
+  - RU:GLTR
+  - RU:GMKN
+  - RU:GTRK
+  - RU:HIMCP
+  - RU:HYDR
+  - RU:IGST
+  - RU:IGSTP
+  - RU:INGR
+  - RU:IRAO
+  - RU:IRKT
+  - RU:JNOS
+  - RU:JNOSP
+  - RU:KAZT
+  - RU:KAZTP
+  - RU:KBSB
+  - RU:KCHE
+  - RU:KCHEP
+  - RU:KLSB
+  - RU:KMAZ
+  - RU:KMEZ
+  - RU:KOGK
+  - RU:KRKN
+  - RU:KRKNP
+  - RU:KRKOP
+  - RU:KROT
+  - RU:KROTP
+  - RU:KRSB
+  - RU:KRSBP
+  - RU:KTSB
+  - RU:KTSBP
+  - RU:KUBE
+  - RU:KUZB
+  - RU:KZOS
+  - RU:KZOSP
+  - RU:LIFE
+  - RU:LKOH
+  - RU:LNZL
+  - RU:LNZLP
+  - RU:LSNG
+  - RU:LSNGP
+  - RU:LSRG
+  - RU:LVHK
+  - RU:MAGE
+  - RU:MAGEP
+  - RU:MAGN
+  - RU:MFGS
+  - RU:MFGSP
+  - RU:MGNT
+  - RU:MGNZ
+  - RU:MGTS
+  - RU:MGTSP
+  - RU:MISB
+  - RU:MISBP
+  - RU:MOEX
+  - RU:MRKC
+  - RU:MRKK
+  - RU:MRKP
+  - RU:MRKS
+  - RU:MRKU
+  resume_failed_only: false
+outputs:
+  run_name: forecasting_benchmark_v2_clean_batched
+  run_id: forecasting_benchmark_v2_clean_batched
+  output_dir: artifacts\forecasting\forecasting_benchmark_v2_clean_batched
+  report_dir: artifacts/reports/forecasting_audit_v2_clean_batched
+  run_manifest_path: artifacts\forecasting\forecasting_benchmark_v2_clean_batched\batch_manifests\batch_01_run_manifest.json
+  config_snapshot_path: artifacts\forecasting\forecasting_benchmark_v2_clean_batched\batch_manifests\batch_01_config_snapshot.yaml
+batch_metadata:
+  batch_plan_path: artifacts\manifests\forecasting_benchmark_v2_clean_batched_series_batches.yaml
+  batch_id: 1
+  n_series: 100

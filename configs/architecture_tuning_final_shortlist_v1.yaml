@@ -2,22 +2,22 @@ stage: architecture_tuning_final_shortlist
 run_name: architecture_tuning_final_shortlist_v1
 
 shortlist_candidate_ids:
-  - esn_g004
-  - chaotic_esn_g003
+  - esn_g001
+  - chaotic_esn_g002
   - transient_chaotic_esn_g002
   - vanilla_mlp_g004
   - chaotic_mlp_g003
   - logistic_g006
   - lstm_g001
-  - chaotic_lstm_g003
+  - chaotic_lstm_g002
 
 shortlist_metadata:
-  esn_g004:
+  esn_g001:
     family: esn
     model_name: esn
     selection_role: practical_main
     rationale: "Лучший нехаотический ESN по среднему MAE между горизонтами при устойчивом времени обучения."
-  chaotic_esn_g003:
+  chaotic_esn_g002:
     family: esn
     model_name: chaotic_esn
     selection_role: chaotic_counterpart
@@ -47,7 +47,7 @@ shortlist_metadata:
     model_name: lstm_forecast
     selection_role: practical_main
     rationale: "Практический LSTM baseline с лучшим балансом точности и скорости в LSTM family."
-  chaotic_lstm_g003:
+  chaotic_lstm_g002:
     family: lstm
     model_name: chaotic_lstm_forecast
     selection_role: chaotic_counterpart

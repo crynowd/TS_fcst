@@ -1,36 +1,36 @@
 stage: forecasting_selected_architectures
 version: v1
-generated_by_run_id: architecture_tuning_final_shortlist_v1_20260329T180423Z
-generated_at_utc: '2026-03-29T18:04:23.716280+00:00'
+generated_by_run_id: architecture_tuning_final_shortlist_v1_20260819T080135Z
+generated_at_utc: '2026-08-19T08:01:35.699084+00:00'
 selected_models:
-- candidate_id: esn_g004
+- candidate_id: esn_g001
   model_name: esn
   family: esn
   source_run_name: architecture_tuning_esn_v1
-  compare_group_id: esn_grp_004
+  compare_group_id: esn_grp_001
   model_params:
-    input_scale: 0.12
-    leak_rate: 0.9
-    n_reservoir: 160
-    ridge_alpha: 0.001
+    input_scale: 0.1
+    leak_rate: 1.0
+    n_reservoir: 64
+    ridge_alpha: 0.0001
     seed: 2026
-    spectral_radius: 0.92
+    spectral_radius: 0.9
   runtime_params: {}
   selection_role: practical_main
   selected_for_main_run: true
-- candidate_id: chaotic_esn_g003
+- candidate_id: chaotic_esn_g002
   model_name: chaotic_esn
   family: esn
   source_run_name: architecture_tuning_esn_v1
-  compare_group_id: esn_grp_003
+  compare_group_id: esn_grp_002
   model_params:
-    chaotic_spectral_radius: 1.3
-    input_scale: 0.08
-    leak_rate: 0.7
-    n_reservoir: 128
-    ridge_alpha: 0.0005
+    chaotic_spectral_radius: 1.25
+    input_scale: 0.1
+    leak_rate: 0.8
+    n_reservoir: 96
+    ridge_alpha: 0.0001
     seed: 2026
-    spectral_radius: 0.98
+    spectral_radius: 0.95
   runtime_params: {}
   selection_role: chaotic_counterpart
   selected_for_main_run: true
@@ -105,15 +105,15 @@ selected_models:
   runtime_params: {}
   selection_role: practical_main
   selected_for_main_run: true
-- candidate_id: chaotic_lstm_g003
+- candidate_id: chaotic_lstm_g002
   model_name: chaotic_lstm_forecast
   family: lstm
   source_run_name: architecture_tuning_lstm_v1
-  compare_group_id: lstm_grp_003
+  compare_group_id: lstm_grp_002
   model_params:
-    dropout: 0.1
+    dropout: 0.0
     hidden_size: 64
-    num_layers: 2
+    num_layers: 1
     r: 3.9
     seed: 2026
   runtime_params: {}

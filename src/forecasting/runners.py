@@ -26,7 +26,12 @@ from src.forecasting.io import (
 )
 from src.forecasting.metrics import METRIC_COLUMNS, compute_regression_metrics
 from src.forecasting.registry import build_model, build_model_registry_table, get_model_specs, resolve_torch_device
-from src.forecasting.windowing import build_rolling_origin_folds, build_supervised_windows
+from src.forecasting.windowing import (
+    TEMPORAL_SPLIT_POLICY_VERSION,
+    build_leakage_safe_fold,
+    build_rolling_origin_folds,
+    build_supervised_windows,
+)
 from src.utils.manifest import get_git_commit, write_manifest
 
 
@@ -174,6 +179,7 @@ def _task_config_hash(
         "dataset_profile": cfg.get("data", {}).get("dataset_profile", ""),
         "dataset_version": cfg.get("dataset_version", ""),
         "source_path": cfg.get("data", {}).get("source_path", ""),
+        "temporal_split_policy": TEMPORAL_SPLIT_POLICY_VERSION,
     }
     return _json_hash(payload)
 
@@ -184,23 +190,61 @@ def _format_eta(elapsed: float, done: int, total: int) -> tuple[float, float]:
     return avg, remaining
 
 
-def _split_metadata_row(run_id: str, s: Any, horizon: int, fold: Any, sup: Any) -> dict[str, Any]:
-    train_ts = pd.to_datetime(sup.timestamps[fold.train_idx])
-    test_ts = pd.to_datetime(sup.timestamps[fold.test_idx])
-    return {
+def _partition_metadata(prefix: str, sup: Any, idx_before: np.ndarray, idx_after: np.ndarray) -> dict[str, Any]:
+    before = np.asarray(idx_before, dtype=np.int64)
+    after = np.asarray(idx_after, dtype=np.int64)
+    row: dict[str, Any] = {
+        f"{prefix}_n_samples_before_purge": int(len(before)),
+        f"{prefix}_n_samples_after_purge": int(len(after)),
+        f"{prefix}_n_samples_removed": int(len(before) - len(after)),
+    }
+    for name, values in [
+        ("forecast_origin", sup.feature_end_idx),
+        ("target_start", sup.target_start_idx),
+        ("target_end", sup.target_end_idx),
+    ]:
+        row[f"{prefix}_first_{name}_idx"] = int(values[after[0]]) if len(after) else pd.NA
+        row[f"{prefix}_last_{name}_idx"] = int(values[after[-1]]) if len(after) else pd.NA
+    return row
+
+
+def _split_metadata_row(run_id: str, s: Any, horizon: int, safe_fold: Any, sup: Any) -> dict[str, Any]:
+    train_ts = pd.to_datetime(sup.timestamps[safe_fold.outer_train_idx])
+    test_ts = pd.to_datetime(sup.timestamps[safe_fold.test_idx])
+    row = {
         "run_id": run_id,
         "series_id": s.series_id,
         "ticker": s.ticker,
         "market": s.market,
-        "fold_id": int(fold.fold_id),
+        "fold_id": int(safe_fold.fold_id),
         "horizon": int(horizon),
         "train_start": train_ts.min() if len(train_ts) else pd.NaT,
         "train_end": train_ts.max() if len(train_ts) else pd.NaT,
         "test_start": test_ts.min() if len(test_ts) else pd.NaT,
         "test_end": test_ts.max() if len(test_ts) else pd.NaT,
-        "n_train": int(len(fold.train_idx)),
-        "n_test": int(len(fold.test_idx)),
+        "n_train": int(len(safe_fold.outer_train_idx)),
+        "n_test": int(len(safe_fold.test_idx)),
+        "split_policy": TEMPORAL_SPLIT_POLICY_VERSION,
     }
+    row.update(
+        _partition_metadata(
+            "outer_train",
+            sup,
+            safe_fold.outer_train_idx_before_purge,
+            safe_fold.outer_train_idx,
+        )
+    )
+    row.update(_partition_metadata("fit", sup, safe_fold.fit_idx_before_purge, safe_fold.fit_idx))
+    row.update(
+        _partition_metadata(
+            "validation",
+            sup,
+            safe_fold.validation_idx_before_purge,
+            safe_fold.validation_idx,
+        )
+    )
+    row.update(_partition_metadata("test", sup, safe_fold.test_idx, safe_fold.test_idx))
+    return row
 
 
 def _write_v2_outputs(
@@ -376,6 +420,7 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
         task_status_existing = _load_existing_task_status(outputs_cfg["task_audit_path"])
 
     planned_tasks = 0
+    planned_config_hashes: set[str] = set()
     split_rows_by_key: dict[tuple[str, int, int], dict[str, Any]] = {}
     for s in selected:
         sdf = lookup.get(s.series_id, pd.DataFrame())
@@ -386,8 +431,16 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
             sup = build_supervised_windows(sdf, horizon=h, window_size=w)
             folds = build_rolling_origin_folds(len(sup.y), n_folds=n_folds)
             for fold in folds:
-                split_rows_by_key[(s.series_id, h, fold.fold_id)] = _split_metadata_row(run_id, s, h, fold, sup)
+                safe_fold = build_leakage_safe_fold(sup, fold)
+                split_rows_by_key[(s.series_id, h, fold.fold_id)] = _split_metadata_row(run_id, s, h, safe_fold, sup)
+                for model_name in active_models:
+                    planned_config_hashes.add(_task_config_hash(cfg, model_name, h, fold.fold_id, w, n_folds))
             planned_tasks += len(folds) * len(active_models)
+
+    task_status_existing = {
+        key: status for key, status in task_status_existing.items() if key[1] in planned_config_hashes
+    }
+    resume_has_compatible_results = bool(task_status_existing)
 
     logger.info(
         "forecasting_benchmark start run_id=%s series=%d models=%d horizons=%d folds=%d planned_tasks=%d",
@@ -476,13 +529,22 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
                             eta,
                         )
 
-                    X_train = sup.X[fold.train_idx]
-                    y_train = sup.y[fold.train_idx]
-                    X_test = sup.X[fold.test_idx]
-                    y_test = sup.y[fold.test_idx]
-                    ts_test = sup.timestamps[fold.test_idx]
+                    safe_fold = build_leakage_safe_fold(sup, fold)
+                    train_reference_idx = safe_fold.outer_train_idx
+                    is_neural = get_model_specs()[model_name].family == "torch"
+                    fit_idx = safe_fold.fit_idx if is_neural else train_reference_idx
+                    validation_idx = safe_fold.validation_idx if is_neural else np.empty((0,), dtype=np.int64)
 
-                    if len(X_train) < 2 or len(X_test) < 1:
+                    X_fit = sup.X[fit_idx]
+                    y_fit = sup.y[fit_idx]
+                    X_val = sup.X[validation_idx] if len(validation_idx) else None
+                    y_val = sup.y[validation_idx] if len(validation_idx) else None
+                    y_train_reference = sup.y[train_reference_idx]
+                    X_test = sup.X[safe_fold.test_idx]
+                    y_test = sup.y[safe_fold.test_idx]
+                    ts_test = sup.timestamps[safe_fold.test_idx]
+
+                    if len(X_fit) < 2 or len(X_test) < 1:
                         task_status = "error"
                         error_type = "insufficient_data"
                         notes = "insufficient fold samples"
@@ -491,16 +553,6 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
                         metrics = {m: np.nan for m in METRIC_COLUMNS}
                         error_count += 1
                     else:
-                        val_size = max(1, int(0.2 * len(X_train)))
-                        if len(X_train) - val_size < 1:
-                            val_size = 0
-                        if val_size > 0:
-                            X_fit, X_val = X_train[:-val_size], X_train[-val_size:]
-                            y_fit, y_val = y_train[:-val_size], y_train[-val_size:]
-                        else:
-                            X_fit, y_fit = X_train, y_train
-                            X_val, y_val = None, None
-
                         model = build_model(model_name=model_name, config=cfg, logger=logger)
                         model_runtime = _training_params_for_model(cfg, model_name)
                         ctx = FitContext(
@@ -528,7 +580,12 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
                             t_pred = monotonic()
                             y_pred = model.predict(X_test, context=ctx)
                             predict_seconds = monotonic() - t_pred
-                            metrics = compute_regression_metrics(y_true=y_test, y_pred=y_pred, y_train=y_train, logger=logger)
+                            metrics = compute_regression_metrics(
+                                y_true=y_test,
+                                y_pred=y_pred,
+                                y_train=y_train_reference,
+                                logger=logger,
+                            )
                             completed_count += 1
                             if hasattr(model, "get_training_diagnostics"):
                                 diag = model.get_training_diagnostics()
@@ -549,7 +606,7 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
                             logger.debug("traceback: %s", traceback.format_exc())
 
                         if save_predictions:
-                            train_mean = float(np.nanmean(y_train)) if len(y_train) else np.nan
+                            train_mean = float(np.nanmean(y_train_reference)) if len(y_train_reference) else np.nan
                             for i in range(len(y_test)):
                                 raw_rows.append(
                                     {
@@ -577,7 +634,7 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
                         "market": s.market,
                         "horizon": horizon,
                         "fold_id": fold.fold_id,
-                        "n_train": int(len(y_train)),
+                        "n_train": int(len(y_train_reference)),
                         "n_test": int(len(y_test)),
                         "fit_seconds": float(fit_seconds) if np.isfinite(fit_seconds) else np.nan,
                         "predict_seconds": float(predict_seconds) if np.isfinite(predict_seconds) else np.nan,
@@ -622,12 +679,17 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
     raw_df = pd.DataFrame(raw_rows) if raw_rows else _empty_frame(RAW_PREDICTION_COLUMNS)
     fold_df = pd.DataFrame(fold_rows) if fold_rows else _empty_frame(FOLD_METRICS_COLUMNS + ["config_hash"])
     audit_df = pd.DataFrame(audit_rows) if audit_rows else _empty_frame(TASK_AUDIT_COLUMNS)
-    split_df = pd.DataFrame(split_rows_by_key.values()) if split_rows_by_key else _empty_frame(SPLIT_METADATA_COLUMNS)
+    split_df = (
+        ensure_table_schema(pd.DataFrame(split_rows_by_key.values()), SPLIT_METADATA_COLUMNS)
+        if split_rows_by_key
+        else _empty_frame(SPLIT_METADATA_COLUMNS)
+    )
 
     if resume and outputs_cfg.get("task_audit_path") and Path(outputs_cfg["task_audit_path"]).exists():
         old_audit = pd.read_parquet(outputs_cfg["task_audit_path"])
         if "config_hash" not in old_audit.columns:
             old_audit["config_hash"] = ""
+        old_audit = old_audit[old_audit["config_hash"].isin(planned_config_hashes)]
         if not old_audit.empty:
             audit_df = pd.concat([old_audit, audit_df], ignore_index=True)
             audit_df = audit_df.drop_duplicates(subset=["task_id", "config_hash"], keep="last")
@@ -635,12 +697,25 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
             old_fold = pd.read_parquet(outputs_cfg["fold_metrics_path"])
             if "config_hash" not in old_fold.columns:
                 old_fold["config_hash"] = ""
+            old_fold = old_fold[old_fold["config_hash"].isin(planned_config_hashes)]
             fold_df = pd.concat([old_fold, fold_df], ignore_index=True)
             fold_df = fold_df.drop_duplicates(subset=["model_name", "series_id", "horizon", "fold_id", "config_hash"], keep="last")
-        if save_predictions and outputs_cfg.get("raw_predictions_path") and Path(outputs_cfg["raw_predictions_path"]).exists():
+        if resume_has_compatible_results and save_predictions and outputs_cfg.get("raw_predictions_path") and Path(outputs_cfg["raw_predictions_path"]).exists():
             old_raw = pd.read_parquet(outputs_cfg["raw_predictions_path"])
             raw_df = pd.concat([old_raw, raw_df], ignore_index=True)
             raw_df = raw_df.drop_duplicates(subset=["model_name", "series_id", "horizon", "fold_id", "timestamp"], keep="last")
+        if outputs_cfg.get("split_metadata_path") and Path(outputs_cfg["split_metadata_path"]).exists():
+            old_split = pd.read_parquet(outputs_cfg["split_metadata_path"])
+            if "split_policy" in old_split.columns:
+                old_split = old_split[old_split["split_policy"] == TEMPORAL_SPLIT_POLICY_VERSION]
+            else:
+                old_split = old_split.iloc[0:0].copy()
+            if not old_split.empty:
+                split_df = pd.concat([old_split, split_df], ignore_index=True)
+                split_df = split_df.drop_duplicates(
+                    subset=["series_id", "horizon", "fold_id", "split_policy"],
+                    keep="last",
+                )
 
     series_df = _aggregate_series_metrics(fold_df)
     end_ts = datetime.now(timezone.utc)
@@ -671,6 +746,7 @@ def run_forecasting_benchmark(cfg: dict[str, Any], logger: Any) -> dict[str, Any
         "config_hash": cfg.get("meta", {}).get("config_hash", ""),
         "device": device_info,
         "input_sources": {"log_returns": cfg["data"]["source_path"], "dataset_profile": cfg["data"].get("dataset_profile", "")},
+        "temporal_split_policy": TEMPORAL_SPLIT_POLICY_VERSION,
         "outputs": {},
         "summary": summary,
     }

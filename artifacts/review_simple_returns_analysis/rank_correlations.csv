@@ -1,0 +1,10 @@
+horizon,metric,spearman_rho,p_value,n_models
+1,rmse,0.990909090909091,3.7625718070854e-09,11
+1,mae,1.0,0.0,11
+1,directional_accuracy,1.0,0.0,11
+5,rmse,0.9727272727272729,5.142177049049177e-07,11
+5,mae,1.0,0.0,11
+5,directional_accuracy,1.0,0.0,11
+20,rmse,0.9,0.00015997142806871355,11
+20,mae,0.9,0.00015997142806871355,11
+20,directional_accuracy,1.0,0.0,11

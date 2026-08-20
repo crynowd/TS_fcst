@@ -21,7 +21,12 @@ from src.architecture_tuning.dataset import (
 from src.forecasting.adapters import FitContext, TaskTimeoutError
 from src.forecasting.metrics import METRIC_COLUMNS, compute_regression_metrics
 from src.forecasting.registry import get_model_specs
-from src.forecasting.windowing import build_rolling_origin_folds, build_supervised_windows
+from src.forecasting.windowing import (
+    TEMPORAL_SPLIT_POLICY_VERSION,
+    build_leakage_safe_fold,
+    build_rolling_origin_folds,
+    build_supervised_windows,
+)
 from src.reporting.excel_export import export_architecture_tuning_benchmark_excel
 from src.utils.manifest import get_git_commit, write_manifest
 
@@ -650,20 +655,18 @@ def run_architecture_tuning_benchmark(cfg: dict[str, Any], logger: Any) -> dict[
                     notes = ""
 
                     for fold in folds:
-                        X_train = sup.X[fold.train_idx]
-                        y_train = sup.y[fold.train_idx]
-                        X_test = sup.X[fold.test_idx]
-                        y_test = sup.y[fold.test_idx]
-
-                        val_size = max(1, int(0.2 * len(X_train)))
-                        if len(X_train) - val_size < 1:
-                            val_size = 0
-                        if val_size > 0:
-                            X_fit, X_val = X_train[:-val_size], X_train[-val_size:]
-                            y_fit, y_val = y_train[:-val_size], y_train[-val_size:]
-                        else:
-                            X_fit, y_fit = X_train, y_train
-                            X_val, y_val = None, None
+                        safe_fold = build_leakage_safe_fold(sup, fold)
+                        train_reference_idx = safe_fold.outer_train_idx
+                        is_neural = get_model_specs()[model_name].family == "torch"
+                        fit_idx = safe_fold.fit_idx if is_neural else train_reference_idx
+                        validation_idx = safe_fold.validation_idx if is_neural else np.empty((0,), dtype=np.int64)
+                        X_fit = sup.X[fit_idx]
+                        y_fit = sup.y[fit_idx]
+                        X_val = sup.X[validation_idx] if len(validation_idx) else None
+                        y_val = sup.y[validation_idx] if len(validation_idx) else None
+                        y_train_reference = sup.y[train_reference_idx]
+                        X_test = sup.X[safe_fold.test_idx]
+                        y_test = sup.y[safe_fold.test_idx]
 
                         fit_seconds = np.nan
                         predict_seconds = np.nan
@@ -685,7 +688,7 @@ def run_architecture_tuning_benchmark(cfg: dict[str, Any], logger: Any) -> dict[
                             metrics = compute_regression_metrics(
                                 y_true=y_test,
                                 y_pred=y_pred,
-                                y_train=y_train,
+                                y_train=y_train_reference,
                                 logger=logger,
                             )
                             fold_metrics_rows.append(metrics)
@@ -929,6 +932,7 @@ def run_architecture_tuning_benchmark(cfg: dict[str, Any], logger: Any) -> dict[
         "timestamp_end": end_ts.isoformat(),
         "git_commit": get_git_commit(Path(cfg["meta"]["project_root"])),
         "config_path": cfg["meta"]["config_path"],
+        "temporal_split_policy": TEMPORAL_SPLIT_POLICY_VERSION,
         "input_sources": {
             "external_data_dir": cfg["external_data_dir"],
             "selected_series_csv": str(selected_series_path),

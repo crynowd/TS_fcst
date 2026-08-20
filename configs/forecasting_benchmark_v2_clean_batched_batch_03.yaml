@@ -1,0 +1,206 @@
+stage: forecasting_benchmark_v2
+random_seed: 2026
+dataset_version: log_returns_v1
+device: auto
+resume: true
+save_metrics: true
+save_predictions: true
+progress_every_n: 20
+data:
+  source_path: artifacts/processed/log_returns_v1.parquet
+  dataset_profile: core_balanced
+  max_series: 418
+  dataset_limit: 418
+  series_selection_mode: first_n
+  series_ids: []
+models:
+  active:
+  - naive_zero
+  - naive_mean
+  - ridge_lag
+  inactive_but_supported: []
+selected_architectures:
+  source_config: configs/forecasting_selected_architectures_v1.yaml
+  baselines_keep:
+  - naive_zero
+  - naive_mean
+  - ridge_lag
+  candidate_ids:
+  - esn_g001
+  - chaotic_esn_g002
+  - transient_chaotic_esn_g002
+  - vanilla_mlp_g004
+  - chaotic_mlp_g003
+  - logistic_g006
+  - lstm_g001
+  - chaotic_lstm_g002
+horizons:
+- 1
+- 5
+- 20
+window_sizes:
+  '1': 64
+  '5': 32
+  '20': 16
+validation:
+  method: rolling_origin
+  n_folds: 3
+timeouts:
+  max_train_seconds_per_task: 300
+  max_predict_seconds_per_task: 30
+training:
+  max_epochs: 20
+  early_stopping_patience: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0
+  by_model:
+    vanilla_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_mlp:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_logistic_net:
+      max_epochs: 30
+      early_stopping_patience: 5
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+    chaotic_lstm_forecast:
+      max_epochs: 40
+      early_stopping_patience: 6
+      learning_rate: 0.001
+      batch_size: 128
+      weight_decay: 0.0
+model_overrides:
+  ridge_lag:
+    alpha: 1.0
+filters:
+  active_models: []
+  horizons: []
+  series_ids:
+  - RU:WTCM
+  - RU:WTCMP
+  - RU:YAKG
+  - RU:YKEN
+  - RU:YKENP
+  - RU:YNDX
+  - RU:YRSBP
+  - RU:ZILL
+  - RU:ZVEZ
+  - US:aat.us
+  - US:abac.us
+  - US:abc.us
+  - US:acc.us
+  - US:aee.us
+  - US:ag.us
+  - US:agys.us
+  - US:aimc.us
+  - US:alks.us
+  - US:amcn.us
+  - US:amp.us
+  - US:amrs.us
+  - US:anat.us
+  - US:anw.us
+  - US:aplp.us
+  - US:arcc.us
+  - US:asml.us
+  - US:atu.us
+  - US:avhi.us
+  - US:avnw.us
+  - US:avx.us
+  - US:awk.us
+  - US:baf.us
+  - US:bbby.us
+  - US:bcv.us
+  - US:bdx.us
+  - US:belfb.us
+  - US:bfo.us
+  - US:bldp.us
+  - US:ble.us
+  - US:bll.us
+  - US:bmrn.us
+  - US:bobe.us
+  - US:bont.us
+  - US:bse.us
+  - US:bsl.us
+  - US:bt.us
+  - US:btz.us
+  - US:bvsn.us
+  - US:bxc.us
+  - US:bxp.us
+  - US:cali.us
+  - US:cash.us
+  - US:ccne.us
+  - US:chi.us
+  - US:ckx.us
+  - US:cls.us
+  - US:cna.us
+  - US:cnk.us
+  - US:cohr.us
+  - US:cort.us
+  - US:cpsi.us
+  - US:cpst.us
+  - US:cray.us
+  - US:crt.us
+  - US:cs.us
+  - US:cuba.us
+  - US:cuo.us
+  - US:cvgw.us
+  - US:cwt.us
+  - US:dhil.us
+  - US:dlhc.us
+  - US:dnb.us
+  - US:dox.us
+  - US:dsgx.us
+  - US:dtf.us
+  - US:dtrm.us
+  - US:dwch.us
+  - US:ec.us
+  - US:echo.us
+  - US:ecpg.us
+  - US:educ.us
+  - US:egan.us
+  - US:enr.us
+  - US:epr_e.us
+  - US:eqix.us
+  - US:eric.us
+  - US:evt.us
+  - US:ew.us
+  - US:ffnw.us
+  - US:fii.us
+  - US:flxs.us
+  - US:fmbh.us
+  - US:fred.us
+  - US:frme.us
+  - US:fwona.us
+  - US:gbdc.us
+  - US:gcbc.us
+  - US:gdo.us
+  - US:gef.us
+  - US:gen.us
+  resume_failed_only: false
+outputs:
+  run_name: forecasting_benchmark_v2_clean_batched
+  run_id: forecasting_benchmark_v2_clean_batched
+  output_dir: artifacts\forecasting\forecasting_benchmark_v2_clean_batched
+  report_dir: artifacts/reports/forecasting_audit_v2_clean_batched
+  run_manifest_path: artifacts\forecasting\forecasting_benchmark_v2_clean_batched\batch_manifests\batch_03_run_manifest.json
+  config_snapshot_path: artifacts\forecasting\forecasting_benchmark_v2_clean_batched\batch_manifests\batch_03_config_snapshot.yaml
+batch_metadata:
+  batch_plan_path: artifacts\manifests\forecasting_benchmark_v2_clean_batched_series_batches.yaml
+  batch_id: 3
+  n_series: 100

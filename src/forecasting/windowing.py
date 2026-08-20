@@ -26,6 +26,21 @@ class FoldSlice:
     test_idx: np.ndarray
 
 
+TEMPORAL_SPLIT_POLICY_VERSION = "target_end_lte_right_origin_v1"
+
+
+@dataclass
+class LeakageSafeFoldSlice:
+    fold_id: int
+    outer_train_idx_before_purge: np.ndarray
+    outer_train_idx: np.ndarray
+    fit_idx_before_purge: np.ndarray
+    fit_idx: np.ndarray
+    validation_idx_before_purge: np.ndarray
+    validation_idx: np.ndarray
+    test_idx: np.ndarray
+
+
 def build_supervised_windows(
     series_df: pd.DataFrame,
     horizon: int,
@@ -109,3 +124,59 @@ def build_rolling_origin_folds(n_samples: int, n_folds: int) -> list[FoldSlice]:
             raise AssertionError("rolling-origin fold is not time ordered")
         folds.append(FoldSlice(fold_id=fold_id, train_idx=train_idx, test_idx=test_idx))
     return folds
+
+
+def purge_left_partition(
+    supervised: SupervisedWindowData,
+    left_idx: np.ndarray,
+    right_idx: np.ndarray,
+) -> np.ndarray:
+    """Keep left samples whose targets are observable by the first right origin."""
+    left = np.asarray(left_idx, dtype=np.int64)
+    right = np.asarray(right_idx, dtype=np.int64)
+    if left.size == 0 or right.size == 0:
+        return left.copy()
+
+    boundary_origin = int(supervised.feature_end_idx[right[0]])
+    keep = supervised.target_end_idx[left] <= boundary_origin
+    return left[keep]
+
+
+def build_leakage_safe_fold(
+    supervised: SupervisedWindowData,
+    fold: FoldSlice,
+    validation_fraction: float = 0.2,
+) -> LeakageSafeFoldSlice:
+    """Build target-aware outer train and chronological neural fit/validation slices."""
+    if not 0.0 < validation_fraction < 1.0:
+        raise ValueError("validation_fraction must be between 0 and 1")
+
+    outer_before = np.asarray(fold.train_idx, dtype=np.int64)
+    test_idx = np.asarray(fold.test_idx, dtype=np.int64)
+    outer_train_idx = purge_left_partition(supervised, outer_before, test_idx)
+
+    val_size = max(1, int(validation_fraction * len(outer_train_idx))) if len(outer_train_idx) else 0
+    if len(outer_train_idx) - val_size < 1:
+        val_size = 0
+
+    if val_size > 0:
+        fit_before = outer_train_idx[:-val_size]
+        validation_before = outer_train_idx[-val_size:]
+        validation_idx = purge_left_partition(supervised, validation_before, test_idx)
+        fit_idx = purge_left_partition(supervised, fit_before, validation_idx)
+    else:
+        fit_before = outer_train_idx.copy()
+        fit_idx = outer_train_idx.copy()
+        validation_before = np.empty((0,), dtype=np.int64)
+        validation_idx = np.empty((0,), dtype=np.int64)
+
+    return LeakageSafeFoldSlice(
+        fold_id=int(fold.fold_id),
+        outer_train_idx_before_purge=outer_before.copy(),
+        outer_train_idx=outer_train_idx,
+        fit_idx_before_purge=fit_before,
+        fit_idx=fit_idx,
+        validation_idx_before_purge=validation_before,
+        validation_idx=validation_idx,
+        test_idx=test_idx.copy(),
+    )

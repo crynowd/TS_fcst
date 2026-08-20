@@ -1,0 +1,15 @@
+{
+  "script": "scripts\\statistical_review_analysis.py",
+  "n_boot": 2000,
+  "seed": 20260611,
+  "inputs": {
+    "routing": "artifacts\\meta_modeling\\routing_rows_v2.parquet",
+    "best_config": "artifacts\\meta_modeling\\best_config_per_task_v2.csv",
+    "forecast_metrics": "artifacts\\forecasting\\forecasting_benchmark_v2\\metrics_long.parquet",
+    "predictions": "artifacts\\forecasting\\forecasting_benchmark_v2\\predictions.parquet",
+    "features": "artifacts\\features\\fold_aware_features_v2\\final_train_only_features_by_fold.parquet",
+    "series_catalog": "artifacts\\processed\\series_catalog_v1.parquet",
+    "neural_diag": "artifacts\\reports\\forecasting_audit_v2\\neural_training_diagnostic.json"
+  },
+  "outputs_dir": "artifacts\\review_statistical_analysis"
+}

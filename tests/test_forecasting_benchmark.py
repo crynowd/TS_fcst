@@ -1,19 +1,21 @@
 ﻿from __future__ import annotations
 
+import copy
 import logging
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import yaml
 
 from src.config.loader import load_forecasting_benchmark_config
 from src.forecasting.data import build_series_lookup, select_series
-from src.forecasting.io import FOLD_METRICS_COLUMNS, RAW_PREDICTION_COLUMNS, ensure_table_schema
+from src.forecasting.io import FOLD_METRICS_COLUMNS, RAW_PREDICTION_COLUMNS, SPLIT_METADATA_COLUMNS, ensure_table_schema
 from src.forecasting.registry import build_model, get_model_specs
 from src.forecasting.runners import run_forecasting_benchmark
 from src.forecasting.targets import build_direct_horizon_target
-from src.forecasting.windowing import build_rolling_origin_folds, build_supervised_windows
+from src.forecasting.windowing import build_leakage_safe_fold, build_rolling_origin_folds, build_supervised_windows
 
 
 def test_target_construction_for_multiple_horizons() -> None:
@@ -50,6 +52,71 @@ def test_window_builder_shapes() -> None:
     folds = build_rolling_origin_folds(n_samples=len(data.y), n_folds=3)
     assert len(folds) == 3
     assert folds[0].train_idx.max() < folds[0].test_idx.min()
+
+
+@pytest.mark.parametrize(("horizon", "window_size"), [(1, 64), (5, 32), (20, 16)])
+def test_leakage_safe_fold_boundaries_and_causal_inputs(horizon: int, window_size: int) -> None:
+    n = 400
+    returns = np.arange(n, dtype=np.float64) / 10_000.0
+    df = pd.DataFrame(
+        {
+            "date": pd.date_range("2020-01-01", periods=n, freq="D"),
+            "log_return": returns,
+        }
+    )
+    supervised = build_supervised_windows(df, horizon=horizon, window_size=window_size)
+
+    for sample_idx in range(len(supervised.y)):
+        origin = int(supervised.feature_end_idx[sample_idx])
+        feature_positions = range(origin - window_size + 1, origin + 1)
+        expected = np.array(
+            [returns[pos - horizon + 1 : pos + 1].sum() for pos in feature_positions],
+            dtype=np.float64,
+        )
+        np.testing.assert_allclose(supervised.X[sample_idx], expected)
+
+    for fold in build_rolling_origin_folds(len(supervised.y), n_folds=3):
+        safe = build_leakage_safe_fold(supervised, fold)
+        test_origin = int(supervised.feature_end_idx[safe.test_idx[0]])
+        validation_origin = int(supervised.feature_end_idx[safe.validation_idx[0]])
+
+        assert int(supervised.target_end_idx[safe.outer_train_idx].max()) <= test_origin
+        assert int(supervised.target_end_idx[safe.fit_idx].max()) <= validation_origin
+        assert int(supervised.target_end_idx[safe.validation_idx].max()) <= test_origin
+        np.testing.assert_array_equal(safe.test_idx, fold.test_idx)
+
+        expected_boundary_purge = horizon - 1
+        assert len(safe.outer_train_idx_before_purge) - len(safe.outer_train_idx) == expected_boundary_purge
+        assert len(safe.fit_idx_before_purge) - len(safe.fit_idx) == expected_boundary_purge
+        assert len(safe.validation_idx_before_purge) - len(safe.validation_idx) == 0
+        if horizon == 1:
+            np.testing.assert_array_equal(safe.outer_train_idx, safe.outer_train_idx_before_purge)
+            np.testing.assert_array_equal(safe.fit_idx, safe.fit_idx_before_purge)
+        elif horizon == 5:
+            assert expected_boundary_purge <= 4
+        else:
+            assert expected_boundary_purge <= 19
+
+
+def test_split_metadata_schema_contains_target_aware_boundaries() -> None:
+    required = {
+        "split_policy",
+        "outer_train_first_forecast_origin_idx",
+        "outer_train_last_target_end_idx",
+        "outer_train_n_samples_before_purge",
+        "outer_train_n_samples_after_purge",
+        "outer_train_n_samples_removed",
+        "fit_first_forecast_origin_idx",
+        "fit_last_target_end_idx",
+        "fit_n_samples_removed",
+        "validation_first_forecast_origin_idx",
+        "validation_last_target_end_idx",
+        "validation_n_samples_removed",
+        "test_first_forecast_origin_idx",
+        "test_last_target_end_idx",
+        "test_n_samples_removed",
+    }
+    assert required.issubset(SPLIT_METADATA_COLUMNS)
 
 
 def test_series_lookup_respects_dataset_profile() -> None:
@@ -181,6 +248,73 @@ def test_small_e2e_smoke_benchmark_on_synthetic_dataset(tmp_path) -> None:
     assert (tmp_path / "series.parquet").exists()
     assert (tmp_path / "audit.parquet").exists()
     assert (tmp_path / "report.xlsx").exists()
+
+
+def test_v2_resume_merges_split_metadata_across_disjoint_series_batches(tmp_path: Path) -> None:
+    rows = []
+    for series_id in ["S1", "S2"]:
+        for i in range(120):
+            rows.append(
+                {
+                    "series_id": series_id,
+                    "ticker": series_id,
+                    "market": "US",
+                    "date": pd.Timestamp("2021-01-01") + pd.Timedelta(days=i),
+                    "log_return": float(i) / 10_000.0,
+                    "dataset_profile": "core_balanced",
+                }
+            )
+    source_path = tmp_path / "synthetic.parquet"
+    pd.DataFrame(rows).to_parquet(source_path, index=False)
+    run_dir = tmp_path / "clean_batched"
+    outputs = {
+        "output_dir": str(run_dir),
+        "metrics_long_path": str(run_dir / "metrics_long.parquet"),
+        "metrics_long_csv_path": str(run_dir / "metrics_long.csv"),
+        "split_metadata_path": str(run_dir / "split_metadata.parquet"),
+        "errors_csv_path": str(run_dir / "errors.csv"),
+        "run_manifest_path": str(run_dir / "run_manifest.json"),
+        "config_snapshot_path": str(run_dir / "config_snapshot.yaml"),
+        "predictions_path": str(run_dir / "predictions.parquet"),
+        "task_audit_path": str(run_dir / "task_audit.parquet"),
+        "fold_metrics_path": str(run_dir / "metrics_long.parquet"),
+        "raw_predictions_path": str(run_dir / "predictions.parquet"),
+        "excel_report_path": str(tmp_path / "report.xlsx"),
+    }
+    base_cfg = {
+        "stage": "forecasting_benchmark_v2",
+        "data": {"source_path": str(source_path), "dataset_profile": "core_balanced", "max_series": 2, "series_selection_mode": "first_n"},
+        "models": {"active": ["naive_zero"], "inactive_but_supported": []},
+        "horizons": [1],
+        "window_sizes": {1: 16},
+        "validation": {"n_folds": 2},
+        "timeouts": {"max_train_seconds_per_task": 10, "max_predict_seconds_per_task": 10},
+        "training": {"max_epochs": 2, "early_stopping_patience": 1, "batch_size": 32, "learning_rate": 1e-3},
+        "model_overrides": {},
+        "filters": {"active_models": [], "horizons": [], "series_ids": [], "resume_failed_only": False},
+        "outputs": outputs,
+        "artifacts": {"manifests": str(tmp_path)},
+        "resume": True,
+        "save_predictions": True,
+        "random_seed": 2026,
+        "dataset_version": "synthetic",
+        "meta": {"config_path": "synthetic", "project_root": str(tmp_path), "run_id": "clean_batched", "log_path": str(tmp_path / "synthetic.log")},
+    }
+    logger = logging.getLogger("forecasting_batched_resume_test")
+    logger.handlers = []
+    logger.addHandler(logging.NullHandler())
+
+    for series_id in ["S1", "S2"]:
+        cfg = copy.deepcopy(base_cfg)
+        cfg["filters"]["series_ids"] = [series_id]
+        run_forecasting_benchmark(cfg=cfg, logger=logger)
+
+    split_df = pd.read_parquet(outputs["split_metadata_path"])
+    audit_df = pd.read_parquet(outputs["task_audit_path"])
+    assert set(split_df["series_id"]) == {"S1", "S2"}
+    assert len(split_df) == 4
+    assert len(audit_df) == 4
+    assert split_df.duplicated(["series_id", "horizon", "fold_id", "split_policy"]).sum() == 0
 
 
 def test_selected_architectures_are_loaded_into_forecasting_pipeline() -> None:
